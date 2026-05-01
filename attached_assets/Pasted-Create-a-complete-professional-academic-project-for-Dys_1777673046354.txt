@@ -1,0 +1,197 @@
+Create a complete professional academic project for **Dysgraphia Detection from Handwritten Images** using **Python + Flask + Machine Learning + HTML/CSS/JavaScript**.
+
+The project must include **Frontend + Backend + AI Models** and must fully satisfy a university machine learning project.
+
+# 🎯 Project Goal
+
+Build a web application that allows users to upload a handwritten image and predicts whether the handwriting is:
+
+* Normal Handwriting
+* Dysgraphia Detected
+
+---
+
+# 📁 Full Project Structure
+
+Create all files and folders:
+
+project/
+│── app.py
+│── train.py
+│── evaluate.py
+│── requirements.txt
+│── model.pkl
+│── data/
+│   ├── normal/
+│   └── dysgraphia/
+│
+│── templates/
+│   └── index.html
+│
+│── static/
+│   ├── style.css
+│   └── script.js
+│
+│── uploads/
+
+---
+
+# 🖥️ FRONTEND REQUIREMENTS
+
+Create a modern responsive interface using HTML + CSS + JavaScript.
+
+The homepage must contain:
+
+* Professional title: Dysgraphia Detection System
+* Short project description
+* Upload image input
+* Drag and drop zone
+* Preview uploaded image
+* Predict button
+* Result area
+* Accuracy display
+* Footer with student name
+
+Design must be modern, clean, academic, professional.
+
+Use:
+
+* Gradient background
+* Cards
+* Rounded buttons
+* Hover effects
+* Responsive layout
+
+---
+
+# ⚙️ BACKEND REQUIREMENTS (Flask)
+
+Use Flask for backend.
+
+Create routes:
+
+/           -> homepage
+/predict    -> image prediction
+/evaluate   -> show model results
+
+Backend must:
+
+* Receive uploaded image
+* Save image in uploads folder
+* Preprocess image using OpenCV
+* Resize to 64x64
+* Convert to grayscale
+* Flatten image
+* Predict with trained model
+* Return result to frontend
+
+---
+
+# 🤖 MACHINE LEARNING REQUIREMENTS
+
+Use dataset folder:
+
+data/
+normal/
+dysgraphia/
+
+Load all images automatically.
+
+Apply preprocessing:
+
+* grayscale
+* Gaussian blur
+* thresholding
+* resize
+
+Train at least 3 models:
+
+1. SVM
+2. Random Forest
+3. KNN
+
+Split dataset:
+
+* 80% train
+* 20% test
+
+Save best model as model.pkl
+
+---
+
+# 📈 EVALUATION REQUIREMENTS
+
+Compute and display:
+
+* Accuracy
+* Precision
+* Recall
+* F1-score
+* Confusion Matrix
+
+Compare all models in console and evaluation page.
+
+Show best model.
+
+---
+
+# 🧠 EXTRA FEATURES
+
+Add:
+
+* Confidence percentage
+* Image preview before prediction
+* Error handling if no image uploaded
+* Success / danger alerts
+* Loading animation
+
+---
+
+# 🎨 CSS REQUIREMENTS
+
+Create modern CSS:
+
+* centered container
+* shadows
+* animations
+* beautiful buttons
+* smooth transitions
+* mobile responsive
+
+---
+
+# 📜 JAVASCRIPT REQUIREMENTS
+
+Create script.js for:
+
+* image preview
+* loading spinner
+* drag & drop upload
+* form validation
+
+---
+
+# 🧾 REQUIREMENTS.TXT
+
+Include:
+
+flask
+opencv-python
+numpy
+scikit-learn
+joblib
+matplotlib
+
+---
+
+# 🎓 FINAL GOAL
+
+Generate all source code fully working.
+
+The project must look professional and impress the professor.
+
+Code must be clean, commented, and ready to run in VS Code.
+
+Use Flask as backend and HTML/CSS/JS as frontend.
+
+Generate complete files with full code.

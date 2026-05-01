@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dysgraphia Detection System</title>
+  <link rel="stylesheet" href="/static/style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+  <!-- ── Navigation ── -->
+  <nav class="navbar">
+    <div class="nav-inner">
+      <div class="nav-brand">
+        <div class="brand-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+          </svg>
+        </div>
+        <span>DysDetect</span>
+      </div>
+      <div class="nav-links">
+        <a href="#" class="nav-link active" data-page="predict" onclick="switchPage('predict')">Predict</a>
+        <a href="#" class="nav-link" data-page="evaluate" onclick="switchPage('evaluate')">Evaluation</a>
+        <a href="#" class="nav-link" data-page="about" onclick="switchPage('about')">About</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ── Hero ── -->
+  <header class="hero">
+    <div class="hero-content">
+      <div class="hero-badge">Master 1 STIC · APM.02 · 2025/2026</div>
+      <h1 class="hero-title">Dysgraphia Detection<br /><span class="gradient-text">System</span></h1>
+      <p class="hero-subtitle">
+        Upload a handwritten image and our AI — trained on SVM, Random Forest, and KNN classifiers —
+        will analyse handwriting features to detect potential signs of dysgraphia.
+      </p>
+      <div class="hero-stats" id="heroStats">
+        <div class="stat-chip"><span class="stat-dot green"></span>3 ML Models</div>
+        <div class="stat-chip"><span class="stat-dot blue"></span>12 Features</div>
+        <div class="stat-chip"><span class="stat-dot purple"></span>Real-time Analysis</div>
+      </div>
+    </div>
+  </header>
+
+  <main class="main-content">
+
+    <!-- ══════════════════════════ PREDICT PAGE ══════════════════════════ -->
+    <section id="page-predict" class="page active">
+      <div class="container">
+        <div class="upload-grid">
+
+          <!-- Upload card -->
+          <div class="card upload-card">
+            <div class="card-header">
+              <h2>Upload Handwriting Sample</h2>
+              <p>Supports PNG, JPG, BMP — up to 16 MB</p>
+            </div>
+
+            <div id="dropZone" class="drop-zone" tabindex="0" role="button" aria-label="Upload handwriting image">
+              <div class="drop-icon">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="17 8 12 3 7 8"/>
+                  <line x1="12" y1="3" x2="12" y2="15"/>
+                </svg>
+              </div>
+              <p class="drop-text">Drag &amp; drop your image here</p>
+              <p class="drop-hint">or click to browse files</p>
+              <input type="file" id="fileInput" accept="image/*" class="hidden" />
+            </div>
+
+            <!-- Preview -->
+            <div id="previewSection" class="preview-section hidden">
+              <div class="preview-header">
+                <span>Preview</span>
+                <button class="btn-ghost btn-sm" onclick="clearImage()">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  Clear
+                </button>
+              </div>
+              <div class="preview-wrapper">
+                <img id="previewImg" src="" alt="Preview" />
+                <div class="preview-info" id="previewInfo"></div>
+              </div>
+            </div>
+
+            <button id="predictBtn" class="btn btn-primary btn-full" disabled onclick="runPrediction()">
+              <span id="btnText">Analyse Handwriting</span>
+              <div id="btnSpinner" class="spinner hidden"></div>
+            </button>
+          </div>
+
+          <!-- Result card -->
+          <div id="resultSection" class="card result-card hidden">
+
+            <!-- Initial placeholder -->
+            <div id="resultPlaceholder" class="result-placeholder">
+              <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" opacity="0.3">
+                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+              <p>Results will appear here after analysis</p>
+            </div>
+
+            <!-- Result content (filled after prediction) -->
+            <div id="resultContent" class="hidden">
+
+              <div id="resultBanner" class="result-banner">
+                <div class="result-icon" id="resultIcon"></div>
+                <div class="result-text">
+                  <div class="result-label" id="resultLabel"></div>
+                  <div class="result-confidence" id="resultConfidence"></div>
+                </div>
+              </div>
+
+              <!-- Probability bar -->
+              <div class="prob-section">
+                <div class="prob-row">
+                  <span class="prob-label">Normal</span>
+                  <div class="prob-bar-track">
+                    <div class="prob-bar green" id="probNormal"></div>
+                  </div>
+                  <span class="prob-value" id="probNormalVal">—</span>
+                </div>
+                <div class="prob-row">
+                  <span class="prob-label">Dysgraphia</span>
+                  <div class="prob-bar-track">
+                    <div class="prob-bar red" id="probDys"></div>
+                  </div>
+                  <span class="prob-value" id="probDysVal">—</span>
+                </div>
+              </div>
+
+              <!-- Model info -->
+              <div class="model-badge" id="modelBadge"></div>
+
+              <!-- Features table -->
+              <div class="feature-section">
+                <div class="section-label">Extracted Features</div>
+                <div class="feature-grid" id="featureGrid"></div>
+              </div>
+
+              <!-- Alert -->
+              <div class="alert" id="resultAlert"></div>
+
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════ EVALUATE PAGE ══════════════════════════ -->
+    <section id="page-evaluate" class="page hidden">
+      <div class="container">
+
+        <div class="page-heading">
+          <h2>Model Evaluation Results</h2>
+          <p>Performance metrics computed on the 20% test split across all three classifiers.</p>
+          <button class="btn btn-outline btn-sm" onclick="loadMetrics()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.08-4.36"/></svg>
+            Refresh
+          </button>
+        </div>
+
+        <div id="metricsLoading" class="loading-state">
+          <div class="loader-ring"></div>
+          <p>Loading metrics…</p>
+        </div>
+
+        <div id="metricsContent" class="hidden">
+
+          <!-- Summary cards -->
+          <div class="metrics-summary" id="metricsSummary"></div>
+
+          <!-- Model cards -->
+          <div class="models-grid" id="modelsGrid"></div>
+
+          <!-- Comparison table -->
+          <div class="card">
+            <div class="card-header">
+              <h3>Model Comparison Table</h3>
+            </div>
+            <div class="table-wrapper">
+              <table class="metrics-table" id="comparisonTable">
+                <thead>
+                  <tr>
+                    <th>Model</th>
+                    <th>Accuracy</th>
+                    <th>Precision</th>
+                    <th>Recall</th>
+                    <th>F1-Score</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="tableBody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Confusion matrices -->
+          <div class="cm-section">
+            <h3>Confusion Matrices</h3>
+            <div class="cm-grid" id="cmGrid"></div>
+          </div>
+
+          <!-- Dataset info -->
+          <div class="card dataset-card" id="datasetCard"></div>
+
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ══════════════════════════ ABOUT PAGE ══════════════════════════ -->
+    <section id="page-about" class="page hidden">
+      <div class="container">
+        <div class="about-grid">
+
+          <div class="card">
+            <div class="card-header">
+              <h2>About This Project</h2>
+            </div>
+            <p class="about-text">
+              This system was developed as a software laboratory work for the
+              <strong>Apprentissage par Machine 02</strong> (Machine Learning 02) course
+              at the University of Constantine 2 — Abdelhamid Mehri.
+            </p>
+            <p class="about-text">
+              The goal is to detect potential signs of <strong>dysgraphia</strong> — a neurological
+              learning difficulty affecting handwriting — using image processing and machine learning.
+            </p>
+          </div>
+
+          <div class="card">
+            <div class="card-header"><h3>Methodology</h3></div>
+            <ol class="step-list">
+              <li>
+                <div class="step-num">1</div>
+                <div><strong>Image Preprocessing</strong> — Grayscale conversion, Gaussian blur, Otsu thresholding</div>
+              </li>
+              <li>
+                <div class="step-num">2</div>
+                <div><strong>Feature Extraction</strong> — 12 structural &amp; texture features per image</div>
+              </li>
+              <li>
+                <div class="step-num">3</div>
+                <div><strong>Model Training</strong> — SVM, Random Forest, KNN on 80% of data</div>
+              </li>
+              <li>
+                <div class="step-num">4</div>
+                <div><strong>Evaluation</strong> — Accuracy, Precision, Recall, F1, Confusion Matrix on 20%</div>
+              </li>
+              <li>
+                <div class="step-num">5</div>
+                <div><strong>Best Model Selection</strong> — Deployed based on highest F1-score</div>
+              </li>
+            </ol>
+          </div>
+
+          <div class="card">
+            <div class="card-header"><h3>Features Extracted</h3></div>
+            <div class="feature-tags">
+              <span class="tag">Mean Pixel Intensity</span>
+              <span class="tag">Std Deviation</span>
+              <span class="tag">Dark Pixel Ratio</span>
+              <span class="tag">Edge Density (Canny)</span>
+              <span class="tag">Contour Count</span>
+              <span class="tag">Mean Contour Area</span>
+              <span class="tag">Mean Contour Perimeter</span>
+              <span class="tag">Horizontal Variance</span>
+              <span class="tag">Vertical Variance</span>
+              <span class="tag">Laplacian Variance</span>
+              <span class="tag">Pixel Skewness</span>
+              <span class="tag">Ink Irregularity</span>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header"><h3>Tech Stack</h3></div>
+            <div class="tech-grid">
+              <div class="tech-item">
+                <div class="tech-icon">🐍</div>
+                <div><strong>Python 3</strong><br /><small>Core language</small></div>
+              </div>
+              <div class="tech-item">
+                <div class="tech-icon">🌐</div>
+                <div><strong>Flask</strong><br /><small>Web framework</small></div>
+              </div>
+              <div class="tech-item">
+                <div class="tech-icon">👁</div>
+                <div><strong>OpenCV</strong><br /><small>Image processing</small></div>
+              </div>
+              <div class="tech-item">
+                <div class="tech-icon">🤖</div>
+                <div><strong>scikit-learn</strong><br /><small>ML models</small></div>
+              </div>
+              <div class="tech-item">
+                <div class="tech-icon">🔢</div>
+                <div><strong>NumPy</strong><br /><small>Numerical computing</small></div>
+              </div>
+              <div class="tech-item">
+                <div class="tech-icon">📦</div>
+                <div><strong>joblib</strong><br /><small>Model serialization</small></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card references-card">
+            <div class="card-header"><h3>Academic References</h3></div>
+            <ul class="ref-list">
+              <li>NINDS — <em>Dysgraphia Information Page</em>, National Institute of Neurological Disorders and Stroke.</li>
+              <li>Cortes C. &amp; Vapnik V. — <em>Support-Vector Networks</em>, Machine Learning, 1995.</li>
+              <li>Breiman L. — <em>Random Forests</em>, Machine Learning 45(1), 2001.</li>
+              <li>Cover T. &amp; Hart P. — <em>Nearest Neighbor Pattern Classification</em>, IEEE Trans. IT, 1967.</li>
+              <li>Bradski G. — <em>The OpenCV Library</em>, Dr. Dobb's Journal, 2000.</li>
+            </ul>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ── Footer ── -->
+  <footer class="footer">
+    <div class="footer-inner">
+      <div class="footer-info">
+        <strong>Dysgraphia Detection System</strong> · Master 1 STIC
+      </div>
+      <div class="footer-course">
+        APM.02 — Apprentissage par Machine 02 · Dr. NECIBI Khaled · 2025/2026
+      </div>
+      <div class="footer-uni">
+        Department of Computer Science · University of Constantine 2 — Abdelhamid Mehri
+      </div>
+    </div>
+  </footer>
+
+  <script src="/static/script.js"></script>
+
+</body>
+</html>
