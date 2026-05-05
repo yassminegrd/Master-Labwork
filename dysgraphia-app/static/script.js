@@ -18,10 +18,10 @@ const $ = id => document.getElementById(id);
 // NAVIGATION
 // ──────────────────────────────────────────────────────────────
 function switchPage(name) {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('page-active'));
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   const page = $(`page-${name}`);
-  if (page) { page.classList.add('active'); page.classList.add('fade-in'); }
+  if (page) { page.classList.add('page-active'); page.classList.add('fade-in'); }
   const btn = document.querySelector(`[data-page="${name}"]`);
   if (btn) btn.classList.add('active');
   if (name === 'dashboard' && !dashReady) loadDashboard();
