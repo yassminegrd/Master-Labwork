@@ -1,7 +1,8 @@
-flask
-opencv-python-headless
-numpy
-scikit-learn
-joblib
-matplotlib
-pillow
+flask>=3.0
+werkzeug>=3.0
+scikit-learn>=1.4
+numpy>=1.26
+opencv-python-headless>=4.9
+joblib>=1.3
+tensorflow>=2.15
+h5py>=3.10

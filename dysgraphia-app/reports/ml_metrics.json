@@ -1,0 +1,77 @@
+{
+  "models": [
+    {
+      "name": "SVM",
+      "accuracy": 0.9896,
+      "precision": 0.9916,
+      "recall": 0.9875,
+      "f1_score": 0.9896,
+      "confusion_matrix": [
+        [
+          238,
+          2
+        ],
+        [
+          3,
+          237
+        ]
+      ],
+      "report": "              precision    recall  f1-score   support\n\n      Normal       0.99      0.99      0.99       240\n  Dysgraphia       0.99      0.99      0.99       240\n\n    accuracy                           0.99       480\n   macro avg       0.99      0.99      0.99       480\nweighted avg       0.99      0.99      0.99       480\n"
+    },
+    {
+      "name": "Random Forest",
+      "accuracy": 0.9771,
+      "precision": 0.9751,
+      "recall": 0.9792,
+      "f1_score": 0.9771,
+      "confusion_matrix": [
+        [
+          234,
+          6
+        ],
+        [
+          5,
+          235
+        ]
+      ],
+      "report": "              precision    recall  f1-score   support\n\n      Normal       0.98      0.97      0.98       240\n  Dysgraphia       0.98      0.98      0.98       240\n\n    accuracy                           0.98       480\n   macro avg       0.98      0.98      0.98       480\nweighted avg       0.98      0.98      0.98       480\n"
+    },
+    {
+      "name": "KNN",
+      "accuracy": 0.9917,
+      "precision": 0.9917,
+      "recall": 0.9917,
+      "f1_score": 0.9917,
+      "confusion_matrix": [
+        [
+          238,
+          2
+        ],
+        [
+          2,
+          238
+        ]
+      ],
+      "report": "              precision    recall  f1-score   support\n\n      Normal       0.99      0.99      0.99       240\n  Dysgraphia       0.99      0.99      0.99       240\n\n    accuracy                           0.99       480\n   macro avg       0.99      0.99      0.99       480\nweighted avg       0.99      0.99      0.99       480\n"
+    }
+  ],
+  "best_model": "KNN",
+  "dataset_size": 2400,
+  "train_size": 1920,
+  "test_size": 480,
+  "feature_names": [
+    "Mean Intensity",
+    "Std Intensity",
+    "Dark Pixel Ratio",
+    "Edge Density",
+    "Contour Count",
+    "Mean Contour Area",
+    "Mean Contour Perimeter",
+    "Horizontal Variance",
+    "Vertical Variance",
+    "Laplacian Variance",
+    "Pixel Skewness",
+    "Ink Irregularity"
+  ],
+  "augmentation_factor": 8
+}
