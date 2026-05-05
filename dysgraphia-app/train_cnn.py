@@ -1,89 +1,128 @@
 """
-=======================================================================
-  train_cnn.py — Convolutional Neural Network (CNN) Training Script
-  Dysgraphia Detection Project | APM.02 | Master 1 STIC | 2025-2026
-  Instructor: Dr. NECIBI Khaled | University of Constantine 2
-=======================================================================
+============================================================
+  Apprentissage par Machine 02 (APM.02)
+  Projet : Détection de la Dysgraphie
+  Dr. NECIBI Khaled | Université Constantine 2 | 2025/2026
+============================================================
 
-This script builds and trains a CNN using TensorFlow/Keras.
+  Fichier : train_cnn.py
+  Modèle  : CNN — Réseau de Neurones Convolutif
 
-Architecture:
-  Input (64x64 grayscale)
-    → Conv2D(32) + MaxPool + Dropout
-    → Conv2D(64) + MaxPool + Dropout
-    → Conv2D(128) + MaxPool + Dropout
-    → Flatten → Dense(256) → Dropout → Dense(1, sigmoid)
+  Basé sur :
+    Workshop 03 — Simple Neural Network Architecture (MLP)
+    Workshop 04 — CNN application (VGG-like)
 
-Binary classification:
-    0 = Normal handwriting
-    1 = Dysgraphia
+  Même structure de code que les workshops :
+    Step 0 : Import all the required libraries
+    Step 1 : Charger et prétraiter les images
+    Step 2 : Construire le modèle CNN (Sequential — comme Workshop 03)
+    Step 3 : Compiler le modèle
+    Step 4 : Entraîner le modèle (model.fit)
+    Step 5 : Afficher l'historique d'entraînement
+    Step 6 : Évaluation du modèle (comme Workshop 03)
+    Step 7 : Rapport de classification + matrice de confusion
+    Step 8 : Sauvegarder le modèle
 
-Workshop reference:
-  Workshop 03 (MLP) and Workshop 04 (CNN/VGG) — Dr. NECIBI Khaled
+  Architecture CNN (inspirée de Workshop 04 — VGG-like blocks) :
+    Input (64×64×1)
+      → Conv2D(32) + ReLU + MaxPool + Dropout
+      → Conv2D(64) + ReLU + MaxPool + Dropout
+      → Conv2D(128)+ ReLU + MaxPool + Dropout
+      → Flatten → Dense(256, ReLU) → Dropout
+      → Dense(1, Sigmoid)   ← classification binaire
 """
+
+# ============================================================
+# Step 0 : Import all the required libraries
+# (même style que Workshop 04, Step 0)
+# ============================================================
 
 import os
 import json
 import numpy as np
 import cv2
 
-# TensorFlow / Keras imports
+# TensorFlow / Keras (utilisé dans Workshop 03 et Workshop 04)
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import (
+    Conv2D, MaxPooling2D, Dropout,
+    Flatten, Dense
+)
 from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 
+# Métriques scikit-learn (comme Workshop 01 et Workshop 03)
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import (accuracy_score, precision_score,
-                             recall_score, f1_score, confusion_matrix,
-                             classification_report)
+from sklearn.metrics import (
+    accuracy_score,
+    precision_score,
+    recall_score,
+    f1_score,
+    confusion_matrix,
+    classification_report
+)
 
-# ──────────────────────────────────────────────────────────────
-# CONFIGURATION
-# ──────────────────────────────────────────────────────────────
+# ============================================================
+# Configuration
+# ============================================================
 
 BASE_DIR    = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR    = os.path.join(BASE_DIR, "data")
 MODELS_DIR  = os.path.join(BASE_DIR, "models")
 REPORTS_DIR = os.path.join(BASE_DIR, "reports")
 
-IMG_SIZE    = 64          # Input image size (64×64 pixels)
-BATCH_SIZE  = 32          # Number of images per training batch
-EPOCHS      = 50          # Maximum number of training epochs
-RANDOM_STATE = 42         # Seed for reproducibility
+IMG_SIZE     = 64    # Taille de l'image d'entrée : 64×64 pixels
+BATCH_SIZE   = 32    # Nombre d'images par batch d'entraînement
+EPOCHS       = 50    # Nombre maximum d'époques
+RANDOM_STATE = 42    # Reproductibilité
 
-os.makedirs(MODELS_DIR, exist_ok=True)
+os.makedirs(MODELS_DIR,  exist_ok=True)
 os.makedirs(REPORTS_DIR, exist_ok=True)
 
-# Silence verbose TF logs (show only errors)
+# Réduire les messages verbose de TensorFlow
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
 
-# ──────────────────────────────────────────────────────────────
-# STEP 1 — LOAD RAW IMAGES
-# ──────────────────────────────────────────────────────────────
+# ============================================================
+# Step 1 : Charger et prétraiter les images
+# (Workshop 03 — "Preprocessing image data")
+#
+# Étapes de prétraitement (comme Workshop 03) :
+#   1. Convertir en niveaux de gris (grayscale)
+#   2. Redimensionner en 64×64
+#   3. Normaliser les pixels : diviser par 255 → valeurs dans [0, 1]
+#   4. Ajouter la dimension du canal : (64,64) → (64,64,1)
+# ============================================================
 
-def load_images():
+def load_and_preprocess_images():
     """
-    Load all images from data/normal/ and data/dysgraphia/.
+    Charge toutes les images depuis data/normal/ et data/dysgraphia/.
+    Applique le prétraitement standard (Workshop 03) :
+      - Conversion en niveaux de gris
+      - Redimensionnement en 64×64
+      - Normalisation : pixels / 255.0  (valeurs dans [0, 1])
 
-    Returns:
-        images : numpy array, shape (N, IMG_SIZE, IMG_SIZE, 1)
-                 — grayscale, normalized to [0, 1]
-        labels : numpy array, shape (N,)
-                 — 0 = normal, 1 = dysgraphia
+    Retourne :
+        X : numpy array, shape (N, 64, 64, 1), float32
+        y : numpy array, shape (N,), int (0=normal, 1=dysgraphie)
     """
-    categories = {"normal": 0, "dysgraphia": 1}
+    categories = {
+        "normal":     0,   # Label 0 = écriture normale
+        "dysgraphia": 1    # Label 1 = dysgraphie
+    }
     exts = {".jpg", ".jpeg", ".png", ".bmp"}
     images, labels = [], []
     total, errors = 0, 0
 
     print("\n  Chargement des images brutes depuis : dataset")
+
     for label_name, label_idx in categories.items():
         folder = os.path.join(DATA_DIR, label_name)
         if not os.path.exists(folder):
-            print(f"  Attention : dossier '{folder}' introuvable.")
+            print(f"  Dossier '{folder}' introuvable.")
             continue
 
         files = sorted(f for f in os.listdir(folder)
@@ -95,193 +134,346 @@ def load_images():
                 errors += 1
                 continue
 
-            # Convert to grayscale, resize to 64×64, normalize [0,1]
+            # Conversion en niveaux de gris (Workshop 03 — preprocessing)
             gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+            # Redimensionnement à 64×64
             gray = cv2.resize(gray, (IMG_SIZE, IMG_SIZE))
-            gray = gray.astype(np.float32) / 255.0   # Normalize pixels
+
+            # Normalisation : pixel / 255.0  (Workshop 03 — "Normalizing")
+            gray = gray.astype(np.float32) / 255.0
 
             images.append(gray)
             labels.append(label_idx)
             count += 1
             total += 1
 
-        print(f"  {label_name:<12} -> {count} images")
+        print(f"    {label_name:<12} -> {count} images")
 
     print(f"  {total} images chargées | {errors} erreurs")
+    print(f"  Dysgraphique : {sum(l==1 for l in labels)} | "
+          f"Typical : {sum(l==0 for l in labels)}")
 
-    # Add channel dimension: (N, 64, 64) → (N, 64, 64, 1)
-    images = np.array(images)[..., np.newaxis]
-    labels = np.array(labels)
+    # Conversion en tableaux numpy
+    X = np.array(images)
 
-    # Print class distribution
-    print(f"\n  Distribution: "
-          f"Regular: {sum(labels==0)} | "
-          f"Dysgraphique: {sum(labels==1)}")
+    # Ajout de la dimension du canal : (N, 64, 64) → (N, 64, 64, 1)
+    # (Workshop 04 — les CNN nécessitent une dimension canal)
+    X = X[..., np.newaxis]
 
-    return images, labels
+    y = np.array(labels)
+    return X, y
 
 
-# ──────────────────────────────────────────────────────────────
-# STEP 2 — BUILD THE CNN MODEL
-# ──────────────────────────────────────────────────────────────
+# ============================================================
+# Step 2 : Construire le modèle CNN
+# (Workshop 04 — CNN architecture, inspiré de VGG)
+# (Workshop 03 — même style Sequential de Keras)
+#
+# Architecture (identique à Workshop 03 pour la structure Sequential) :
+#   model = Sequential([...])
+#
+# Blocs convolutifs (Workshop 04 — VGG-like blocks) :
+#   Conv2D → ReLU → MaxPooling → Dropout
+# ============================================================
 
-def build_cnn(input_shape=(IMG_SIZE, IMG_SIZE, 1)):
+def build_cnn_model():
     """
-    Build a simple but effective CNN for binary image classification.
+    Construit le modèle CNN avec l'API Sequential de Keras.
 
-    Architecture (inspired by Workshop 04 — VGG-like blocks):
-    ┌─────────────────────────────────────────────────────┐
-    │ Input: (64, 64, 1)                                  │
-    │                                                     │
-    │ Block 1: Conv2D(32) → ReLU → MaxPool → Dropout(0.25)│
-    │ Block 2: Conv2D(64) → ReLU → MaxPool → Dropout(0.25)│
-    │ Block 3: Conv2D(128)→ ReLU → MaxPool → Dropout(0.25)│
-    │                                                     │
-    │ Flatten → Dense(256, ReLU) → Dropout(0.5)          │
-    │ Output: Dense(1, Sigmoid)   ← binary classification│
-    └─────────────────────────────────────────────────────┘
+    Même style de code que Workshop 03 (MLP) et Workshop 04 (CNN/VGG) :
+        model = Sequential([
+            Conv2D(32, (3,3), activation='relu', ...),
+            MaxPooling2D((2,2)),
+            Dropout(0.25),
+            ...
+            Dense(1, activation='sigmoid')
+        ])
 
-    Loss    : Binary Crossentropy (for 2-class classification)
-    Optimizer: Adam (adaptive learning rate)
-    Metric  : Accuracy
+    Couches :
+      - Conv2D   : extrait les features locales (bords, textures, traits)
+      - MaxPooling2D : réduit la taille spatiale (sous-échantillonnage)
+      - Dropout  : évite le surapprentissage (regularisation)
+      - Flatten  : convertit les feature maps 2D en vecteur 1D
+      - Dense    : couche fully-connected (comme dans Workshop 03 MLP)
+      - Sigmoid  : activation de sortie pour classification binaire
     """
-    model = keras.Sequential([
-        # ── Input layer
-        keras.Input(shape=input_shape),
 
-        # ── Block 1: 32 filters, 3×3 kernel
-        # Learns low-level features: edges, corners
-        layers.Conv2D(32, (3, 3), activation="relu", padding="same"),
-        layers.MaxPooling2D((2, 2)),          # Reduce size: 64→32
-        layers.Dropout(0.25),                # Prevent overfitting
+    model = Sequential([
+        # ── Bloc 1 : 32 filtres 3×3
+        # Apprend les features bas niveau : bords, coins, traits
+        Conv2D(32, (3, 3), activation='relu', padding='same',
+               input_shape=(IMG_SIZE, IMG_SIZE, 1)),
+        MaxPooling2D((2, 2)),          # 64×64 → 32×32
+        Dropout(0.25),                 # Dropout 25% des neurones
 
-        # ── Block 2: 64 filters
-        # Learns mid-level features: curves, stroke patterns
-        layers.Conv2D(64, (3, 3), activation="relu", padding="same"),
-        layers.MaxPooling2D((2, 2)),          # Reduce size: 32→16
-        layers.Dropout(0.25),
+        # ── Bloc 2 : 64 filtres 3×3
+        # Apprend les features intermédiaires : courbes, motifs d'écriture
+        Conv2D(64, (3, 3), activation='relu', padding='same'),
+        MaxPooling2D((2, 2)),          # 32×32 → 16×16
+        Dropout(0.25),
 
-        # ── Block 3: 128 filters
-        # Learns high-level features: writing style patterns
-        layers.Conv2D(128, (3, 3), activation="relu", padding="same"),
-        layers.MaxPooling2D((2, 2)),          # Reduce size: 16→8
-        layers.Dropout(0.25),
+        # ── Bloc 3 : 128 filtres 3×3
+        # Apprend les features haut niveau : style d'écriture global
+        Conv2D(128, (3, 3), activation='relu', padding='same'),
+        MaxPooling2D((2, 2)),          # 16×16 → 8×8
+        Dropout(0.25),
 
-        # ── Flatten: convert 3D feature maps to 1D vector
-        layers.Flatten(),
+        # ── Aplatissement (Flatten — Workshop 03)
+        # Convertit (8, 8, 128) → vecteur de 8192 dimensions
+        Flatten(),
 
-        # ── Fully connected layer
-        layers.Dense(256, activation="relu"),
-        layers.Dropout(0.5),                 # Strong regularization
+        # ── Couche Dense (comme Workshop 03 — hidden layer)
+        Dense(256, activation='relu'),
+        Dropout(0.5),                  # Dropout fort avant la sortie
 
-        # ── Output: single neuron with sigmoid → probability in [0,1]
-        # Output > 0.5 → Dysgraphia, Output <= 0.5 → Normal
-        layers.Dense(1, activation="sigmoid"),
+        # ── Couche de sortie
+        # 1 neurone, activation Sigmoid → probabilité dans [0, 1]
+        # Sortie > 0.5 → Dysgraphie | Sortie ≤ 0.5 → Normal
+        Dense(1, activation='sigmoid'),
     ])
-
-    # Compile the model
-    model.compile(
-        optimizer="adam",
-        loss="binary_crossentropy",
-        metrics=["accuracy"],
-    )
 
     return model
 
 
-# ──────────────────────────────────────────────────────────────
-# STEP 3 — TRAIN THE CNN
-# ──────────────────────────────────────────────────────────────
+# ============================================================
+# Step 3 : Compiler le modèle
+# (Workshop 03 — "Loss function & optimization")
+#
+# Optimiseur : Adam (Workshop 03 — le plus populaire)
+# Perte      : Binary Crossentropy (pour classification binaire)
+# Métrique   : Accuracy
+# ============================================================
 
-def train():
+def compile_model(model):
     """
-    Full CNN training pipeline.
-    Returns metrics dict.
+    Compile le modèle CNN.
+
+    (Workshop 03 — même appel model.compile que dans le cours)
     """
-    print("\n" + "=" * 60)
-    print("  DYSGRAPHIA DETECTION — CNN (Deep Learning)")
-    print("=" * 60)
-
-    # ── Load images
-    X, y = load_images()
-
-    if len(X) == 0:
-        raise RuntimeError("Aucune image trouvée dans data/")
-
-    # ── Split: 80% training, 20% testing
-    print("\n  Division train/test (80% / 20%)...")
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=RANDOM_STATE, stratify=y
+    model.compile(
+        optimizer='adam',                 # Optimiseur Adam (Workshop 03)
+        loss='binary_crossentropy',       # Perte pour classification binaire
+        metrics=['accuracy']             # Métrique : accuracy
     )
-    print(f"  Train : {len(X_train)} | Test : {len(X_test)}")
+    return model
 
-    # ── Data augmentation using Keras ImageDataGenerator
-    # This generates augmented batches ON-THE-FLY during training
-    # (no need to save augmented images to disk)
-    print("\n  Préparation de l'augmentation de données...")
+
+# ============================================================
+# Step 4 : Entraîner le modèle
+# (Workshop 03 — "Training the MLP model")
+#
+# Même appel : model.fit(X_train, y_train, ...)
+# Avec validation_data pour surveiller la généralisation
+# ============================================================
+
+def train_cnn(model, X_train, y_train, X_test, y_test):
+    """
+    Entraîne le modèle CNN.
+
+    Callbacks utilisés :
+      - EarlyStopping : arrête si val_loss ne s'améliore pas (patience=8)
+        → évite le surapprentissage (même principe que Workshop 03)
+      - ModelCheckpoint : sauvegarde automatiquement le meilleur modèle
+
+    ImageDataGenerator : augmentation de données à la volée
+      (rotation, zoom, flip, etc.)
+    """
+
+    # Augmentation des données à la volée (Keras ImageDataGenerator)
+    # Appliqué uniquement sur les données d'entraînement
     datagen = ImageDataGenerator(
-        rotation_range=15,           # Rotate ±15 degrees
-        zoom_range=0.1,              # Zoom in/out by 10%
-        width_shift_range=0.1,       # Horizontal shift by 10%
-        height_shift_range=0.1,      # Vertical shift by 10%
-        brightness_range=[0.8, 1.2], # Brightness variation
-        horizontal_flip=True,        # Mirror the image
-        fill_mode="reflect",         # Fill empty pixels with reflection
+        rotation_range=15,           # Rotation ±15°
+        zoom_range=0.1,              # Zoom ±10%
+        width_shift_range=0.1,       # Décalage horizontal ±10%
+        height_shift_range=0.1,      # Décalage vertical ±10%
+        brightness_range=[0.8, 1.2], # Variation de luminosité
+        horizontal_flip=True,        # Flip horizontal
+        fill_mode='reflect'
     )
     datagen.fit(X_train)
 
-    # ── Build CNN
-    print("\n  Construction du modèle CNN...")
-    model = build_cnn()
-    model.summary()
-
-    # ── Callbacks
-    # EarlyStopping: stop training when validation loss stops improving
+    # Early Stopping (Workshop 03 — "When does training stop?")
+    # Arrêt si val_loss ne s'améliore pas après 8 époques
     early_stopping = EarlyStopping(
-        monitor="val_loss",
-        patience=8,          # Wait 8 epochs before stopping
-        restore_best_weights=True,  # Restore the best model weights
-        verbose=1,
+        monitor='val_loss',
+        patience=8,
+        restore_best_weights=True,   # Restaurer les meilleurs poids
+        verbose=1
     )
 
-    # ModelCheckpoint: save the best model during training
-    checkpoint_path = os.path.join(MODELS_DIR, "cnn_model.h5")
+    # Sauvegarde automatique du meilleur modèle
+    model_path = os.path.join(MODELS_DIR, 'cnn_model.h5')
     checkpoint = ModelCheckpoint(
-        checkpoint_path,
-        monitor="val_accuracy",
+        model_path,
+        monitor='val_accuracy',
         save_best_only=True,
-        verbose=1,
+        verbose=1
     )
 
-    # ── Train the model
-    print(f"\n  Entraînement CNN (max {EPOCHS} époques, "
-          f"early stopping patience=8)...")
+    print(f"\n  Entraînement CNN "
+          f"(max {EPOCHS} époques, early stopping patience=8)...")
+
+    # ENTRAÎNEMENT (Workshop 03 — model.fit)
     history = model.fit(
         datagen.flow(X_train, y_train, batch_size=BATCH_SIZE),
         steps_per_epoch=len(X_train) // BATCH_SIZE,
         validation_data=(X_test, y_test),
         epochs=EPOCHS,
         callbacks=[early_stopping, checkpoint],
-        verbose=1,
+        verbose=1
     )
 
-    # ── Evaluate on test set
+    return history
+
+
+# ============================================================
+# Step 5 : Afficher l'historique d'entraînement
+# (Workshop 03 — "Plot the loss function over Epochs")
+# ============================================================
+
+def print_training_history(history):
+    """
+    Affiche l'historique d'entraînement epoch par epoch.
+    (Workshop 03 — "Plot the loss function over Epochs")
+
+    Dans le workshop, on utilisait matplotlib pour tracer la courbe.
+    Ici on affiche les valeurs — les graphiques sont dans l'interface web.
+    """
+    print("\n  Historique d'entraînement (Loss + Accuracy par époque) :")
+    print(f"  {'Époque':>6} | {'Train Loss':>10} | {'Val Loss':>10} | "
+          f"{'Train Acc':>10} | {'Val Acc':>10}")
+    print("  " + "-" * 56)
+
+    acc     = history.history['accuracy']
+    val_acc = history.history['val_accuracy']
+    loss    = history.history['loss']
+    val_loss= history.history['val_loss']
+
+    for epoch in range(len(acc)):
+        print(f"  {epoch+1:>6} | {loss[epoch]:>10.4f} | "
+              f"{val_loss[epoch]:>10.4f} | "
+              f"{acc[epoch]:>10.4f} | {val_acc[epoch]:>10.4f}")
+
+
+# ============================================================
+# Step 6 : Évaluation du modèle
+# (Workshop 03 — "Model Evaluation and Prediction")
+# (Workshop 01 — mêmes métriques : accuracy, precision, recall, F1)
+# ============================================================
+
+def evaluate_cnn(model, X_test, y_test):
+    """
+    Évalue le CNN sur le jeu de test.
+
+    Mêmes métriques que Workshop 01 et Workshop 03 :
+      - accuracy_score
+      - precision_score
+      - recall_score
+      - f1_score
+      - confusion_matrix
+      - classification_report (Workshop 03 — "Generate Classification Report")
+    """
     print("\n  Évaluation du CNN sur le jeu de test...")
+
+    # Prédiction (Workshop 04 — Step 4 : "run the model's prediction")
     y_pred_prob = model.predict(X_test, verbose=0).flatten()
+
+    # Convertir les probabilités en classes binaires
+    # > 0.5 → Dysgraphie (1), ≤ 0.5 → Normal (0)
     y_pred = (y_pred_prob > 0.5).astype(int)
 
-    acc   = float(accuracy_score(y_test, y_pred))
-    prec  = float(precision_score(y_test, y_pred, zero_division=0))
-    rec   = float(recall_score(y_test, y_pred, zero_division=0))
-    f1    = float(f1_score(y_test, y_pred, zero_division=0))
-    cm    = confusion_matrix(y_test, y_pred).tolist()
-    report = classification_report(y_test, y_pred,
-                                   target_names=["Normal", "Dysgraphia"],
-                                   zero_division=0)
-    print(f"\n  CNN — Accuracy: {acc:.4f}  F1: {f1:.4f}")
+    # Métriques (Workshop 01, Step 04 — "Model Evaluation")
+    acc  = accuracy_score(y_test, y_pred)
+    prec = precision_score(y_test, y_pred, zero_division=0)
+    rec  = recall_score(y_test, y_pred, zero_division=0)
+    f1   = f1_score(y_test, y_pred, zero_division=0)
+    cm   = confusion_matrix(y_test, y_pred)
+
+    # Affichage Accuracy (Workshop 03)
+    print(f"\n  CNN_dysg")
+    print(f"  Accuracy : {acc:.4f}")
+    print()
+
+    # Rapport de classification (Workshop 03 — "Generate Classification Report")
+    report = classification_report(
+        y_test, y_pred,
+        target_names=["Typical", "Dysgraphique"],
+        zero_division=0
+    )
     print(report)
 
-    # ── Save training history (for loss/accuracy plots in the UI)
+    # Matrice de confusion (Workshop 03 — "Plot Confusion Matrix")
+    print("  Matrice de Confusion :")
+    print(f"  {cm}")
+
+    return {
+        "name":             "CNN",
+        "accuracy":         round(float(acc),  4),
+        "precision":        round(float(prec), 4),
+        "recall":           round(float(rec),  4),
+        "f1_score":         round(float(f1),   4),
+        "confusion_matrix": cm.tolist(),
+        "report":           report,
+    }
+
+
+# ============================================================
+# MAIN — Pipeline complet CNN
+# (suit les mêmes étapes que Workshop 03 et Workshop 04)
+# ============================================================
+
+def train():
+    """
+    Pipeline complet CNN.
+    Même structure que Workshop 03 (MLP → CNN) et Workshop 04 (CNN/VGG).
+    """
+    print("\n" + "=" * 60)
+    print("  DYSGRAPHIA DETECTION — CNN (Deep Learning)")
+    print("  Basé sur Workshop 03 + Workshop 04 — APM.02")
+    print("=" * 60)
+
+    # STEP 1 : Charger et prétraiter les images
+    print("\n[Step 1] Chargement et prétraitement des images...")
+    X, y = load_and_preprocess_images()
+    if len(X) == 0:
+        raise RuntimeError("Aucune image trouvée dans data/")
+
+    # Division 80/20 (Workshop 01 + Workshop 03 — même split)
+    print("\n[Step 1b] Division train/test (80% / 20%)...")
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y,
+        test_size=0.2,
+        random_state=RANDOM_STATE,
+        stratify=y
+    )
+    print(f"  Train : {len(X_train)} | Test : {len(X_test)}")
+
+    # STEP 2 : Construire le modèle CNN
+    print("\n[Step 2] Construction du modèle CNN...")
+    model = build_cnn_model()
+
+    # Afficher l'architecture (Workshop 04 — avant d'entraîner)
+    model.summary()
+
+    # STEP 3 : Compiler le modèle
+    print("\n[Step 3] Compilation du modèle (Adam + Binary Crossentropy)...")
+    model = compile_model(model)
+
+    # STEP 4 : Entraîner le modèle (Workshop 03 — model.fit)
+    print("\n[Step 4] Entraînement du modèle...")
+    history = train_cnn(model, X_train, y_train, X_test, y_test)
+
+    # STEP 5 : Afficher l'historique (Workshop 03 — "Plot loss over Epochs")
+    print("\n[Step 5] Historique d'entraînement :")
+    print_training_history(history)
+
+    # STEP 6 : Évaluation (Workshop 03 — "Model Evaluation and Prediction")
+    print("\n[Step 6] Évaluation du modèle CNN...")
+    metrics = evaluate_cnn(model, X_test, y_test)
+
+    # STEP 7 : Sauvegarder l'historique + métriques en JSON
+    print("\n[Step 7] Sauvegarde du modèle et des métriques...")
     history_data = {
         "accuracy":     [float(v) for v in history.history["accuracy"]],
         "val_accuracy": [float(v) for v in history.history["val_accuracy"]],
@@ -289,15 +481,8 @@ def train():
         "val_loss":     [float(v) for v in history.history["val_loss"]],
     }
 
-    # ── Save CNN metrics
     cnn_metrics = {
-        "name":             "CNN",
-        "accuracy":         round(acc,  4),
-        "precision":        round(prec, 4),
-        "recall":           round(rec,  4),
-        "f1_score":         round(f1,   4),
-        "confusion_matrix": cm,
-        "report":           report,
+        **metrics,
         "training_history": history_data,
         "epochs_trained":   len(history.history["accuracy"]),
         "dataset_size":     int(len(X)),
@@ -308,12 +493,25 @@ def train():
     with open(os.path.join(REPORTS_DIR, "cnn_metrics.json"), "w") as f:
         json.dump(cnn_metrics, f, indent=2)
 
-    print(f"\n  Modèle sauvegardé -> {checkpoint_path}")
+    print(f"  Modèle sauvegardé  -> models/cnn_model.h5")
     print(f"  Métriques sauvegardées -> reports/cnn_metrics.json")
+
+    # STEP 8 : Résumé final
+    print("\n" + "=" * 60)
+    print("  RÉSUMÉ CNN")
+    print("=" * 60)
+    print(f"  Accuracy  : {metrics['accuracy']:.4f}")
+    print(f"  Precision : {metrics['precision']:.4f}")
+    print(f"  Recall    : {metrics['recall']:.4f}")
+    print(f"  F1-Score  : {metrics['f1_score']:.4f}")
+    print(f"  Époques   : {cnn_metrics['epochs_trained']}")
     print("=" * 60 + "\n")
 
     return cnn_metrics
 
 
+# ============================================================
+# Point d'entrée
+# ============================================================
 if __name__ == "__main__":
     train()

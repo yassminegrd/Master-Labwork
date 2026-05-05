@@ -1,61 +1,61 @@
 {
   "models": [
     {
-      "name": "SVM",
-      "accuracy": 0.9896,
-      "precision": 0.9916,
-      "recall": 0.9875,
-      "f1_score": 0.9896,
+      "name": "KNN",
+      "accuracy": 0.9833,
+      "precision": 0.9833,
+      "recall": 0.9833,
+      "f1_score": 0.9833,
       "confusion_matrix": [
         [
-          238,
-          2
+          236,
+          4
+        ],
+        [
+          4,
+          236
+        ]
+      ],
+      "report": "              precision    recall  f1-score   support\n\n     Typical       0.98      0.98      0.98       240\nDysgraphique       0.98      0.98      0.98       240\n\n    accuracy                           0.98       480\n   macro avg       0.98      0.98      0.98       480\nweighted avg       0.98      0.98      0.98       480\n"
+    },
+    {
+      "name": "SVM",
+      "accuracy": 0.9938,
+      "precision": 1.0,
+      "recall": 0.9875,
+      "f1_score": 0.9937,
+      "confusion_matrix": [
+        [
+          240,
+          0
         ],
         [
           3,
           237
         ]
       ],
-      "report": "              precision    recall  f1-score   support\n\n      Normal       0.99      0.99      0.99       240\n  Dysgraphia       0.99      0.99      0.99       240\n\n    accuracy                           0.99       480\n   macro avg       0.99      0.99      0.99       480\nweighted avg       0.99      0.99      0.99       480\n"
+      "report": "              precision    recall  f1-score   support\n\n     Typical       0.99      1.00      0.99       240\nDysgraphique       1.00      0.99      0.99       240\n\n    accuracy                           0.99       480\n   macro avg       0.99      0.99      0.99       480\nweighted avg       0.99      0.99      0.99       480\n"
     },
     {
       "name": "Random Forest",
-      "accuracy": 0.9771,
-      "precision": 0.9751,
+      "accuracy": 0.9854,
+      "precision": 0.9916,
       "recall": 0.9792,
-      "f1_score": 0.9771,
-      "confusion_matrix": [
-        [
-          234,
-          6
-        ],
-        [
-          5,
-          235
-        ]
-      ],
-      "report": "              precision    recall  f1-score   support\n\n      Normal       0.98      0.97      0.98       240\n  Dysgraphia       0.98      0.98      0.98       240\n\n    accuracy                           0.98       480\n   macro avg       0.98      0.98      0.98       480\nweighted avg       0.98      0.98      0.98       480\n"
-    },
-    {
-      "name": "KNN",
-      "accuracy": 0.9917,
-      "precision": 0.9917,
-      "recall": 0.9917,
-      "f1_score": 0.9917,
+      "f1_score": 0.9853,
       "confusion_matrix": [
         [
           238,
           2
         ],
         [
-          2,
-          238
+          5,
+          235
         ]
       ],
-      "report": "              precision    recall  f1-score   support\n\n      Normal       0.99      0.99      0.99       240\n  Dysgraphia       0.99      0.99      0.99       240\n\n    accuracy                           0.99       480\n   macro avg       0.99      0.99      0.99       480\nweighted avg       0.99      0.99      0.99       480\n"
+      "report": "              precision    recall  f1-score   support\n\n     Typical       0.98      0.99      0.99       240\nDysgraphique       0.99      0.98      0.99       240\n\n    accuracy                           0.99       480\n   macro avg       0.99      0.99      0.99       480\nweighted avg       0.99      0.99      0.99       480\n"
     }
   ],
-  "best_model": "KNN",
+  "best_model": "SVM",
   "dataset_size": 2400,
   "train_size": 1920,
   "test_size": 480,

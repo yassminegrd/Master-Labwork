@@ -1,202 +1,251 @@
 """
-=======================================================================
-  train_ml.py — Classical Machine Learning Training Script
-  Dysgraphia Detection Project | APM.02 | Master 1 STIC | 2025-2026
-  Instructor: Dr. NECIBI Khaled | University of Constantine 2
-=======================================================================
+============================================================
+  Apprentissage par Machine 02 (APM.02)
+  Projet : Détection de la Dysgraphie
+  Dr. NECIBI Khaled | Université Constantine 2 | 2025/2026
+============================================================
 
-This script trains three classical ML classifiers:
-  - SVM   (Support Vector Machine)
-  - RF    (Random Forest)
-  - KNN   (K-Nearest Neighbors)
+  Fichier : train_ml.py
+  Modèles : KNN, SVM, Random Forest (classiques)
 
-It uses image augmentation to multiply the dataset size x8.
-Features are extracted from each image using OpenCV.
+  Basé sur : Workshop 01 — Measuring Model Performance
+  (même structure, mêmes étapes, même style de code)
+
+  Étapes :
+    Step 0  : Imports
+    Step 1  : Chargement des images depuis data/
+    Step 2  : Augmentation des données (x8)
+    Step 3  : Extraction des features (12 features OpenCV)
+    Step 4  : Prétraitement (split 80/20 + normalisation)
+    Step 5  : Entraînement des modèles (KNN, SVM, RF)
+    Step 6  : Évaluation (accuracy, precision, recall, F1)
+    Step 7  : Affichage rapport + matrice de confusion
+    Step 8  : Sauvegarde des modèles
 """
+
+# ============================================================
+# Step 0 : Import all required libraries
+# (comme dans Workshop 01 — on importe tout en premier)
+# ============================================================
 
 import os
 import cv2
 import numpy as np
 import joblib
 import json
+
+# scikit-learn : même bibliothèque utilisée dans Workshop 01
 from sklearn.svm import SVC
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import (accuracy_score, precision_score,
-                             recall_score, f1_score, confusion_matrix,
-                             classification_report)
+from sklearn.metrics import (
+    accuracy_score,
+    precision_score,
+    recall_score,
+    f1_score,
+    confusion_matrix,
+    classification_report
+)
 
-# ──────────────────────────────────────────────────────────────
-# CONFIGURATION
-# ──────────────────────────────────────────────────────────────
+# ============================================================
+# Configuration générale
+# ============================================================
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DATA_DIR = os.path.join(BASE_DIR, "data")
-MODELS_DIR = os.path.join(BASE_DIR, "models")
+BASE_DIR    = os.path.dirname(os.path.abspath(__file__))
+DATA_DIR    = os.path.join(BASE_DIR, "data")
+MODELS_DIR  = os.path.join(BASE_DIR, "models")
 REPORTS_DIR = os.path.join(BASE_DIR, "reports")
 
-# Image size for feature extraction
-IMG_SIZE = 64
+IMG_SIZE          = 64    # Taille de redimensionnement des images (64x64)
+AUGMENTATION_FACTOR = 8   # Nombre de copies augmentées par image originale
+RANDOM_STATE      = 42    # Graine aléatoire (pour la reproductibilité)
 
-# Random seed for reproducibility
-RANDOM_STATE = 42
-
-# How many augmented copies per original image
-AUGMENTATION_FACTOR = 8
-
-os.makedirs(MODELS_DIR, exist_ok=True)
+os.makedirs(MODELS_DIR,  exist_ok=True)
 os.makedirs(REPORTS_DIR, exist_ok=True)
 
 
-# ──────────────────────────────────────────────────────────────
-# STEP 0 — SYNTHETIC DATA GENERATION
-# (Only runs if the data/ folder is empty)
-# ──────────────────────────────────────────────────────────────
+# ============================================================
+# Génération de données synthétiques
+# (utilisé seulement si le dossier data/ est vide)
+# ============================================================
 
-def _draw_lines(img, n_lines, y_spread, intensity_noise, spacing_noise):
-    """Draw horizontal strokes that simulate handwritten text lines."""
-    h, w = img.shape
-    for i in range(n_lines):
-        base_y = int((i + 1) * h / (n_lines + 1))
-        y = base_y + int(np.random.uniform(-y_spread, y_spread))
-        y = max(4, min(h - 4, y))
-        x_start = np.random.randint(2, 8)
-        x_end = np.random.randint(w - 8, w - 2)
-        thickness = np.random.randint(1, 3)
-        points = [(x, y + int(np.random.uniform(-spacing_noise, spacing_noise)))
-                  for x in range(x_start, x_end, 2)]
-        for j in range(len(points) - 1):
-            color = int(np.random.uniform(0, intensity_noise))
-            cv2.line(img, points[j], points[j + 1], color, thickness)
-
-
-def ensure_data_exists(n_per_class=150):
-    """Generate synthetic handwriting images when no real data is available."""
+def generate_synthetic_data(n_per_class=150):
+    """Génère des images d'écriture synthétiques si aucune donnée réelle."""
     normal_dir = os.path.join(DATA_DIR, "normal")
-    dys_dir = os.path.join(DATA_DIR, "dysgraphia")
+    dys_dir    = os.path.join(DATA_DIR, "dysgraphia")
     os.makedirs(normal_dir, exist_ok=True)
-    os.makedirs(dys_dir, exist_ok=True)
+    os.makedirs(dys_dir,    exist_ok=True)
 
-    def count(folder):
-        exts = {".jpg", ".jpeg", ".png", ".bmp"}
-        return sum(1 for f in os.listdir(folder)
-                   if os.path.splitext(f)[1].lower() in exts)
+    exts = {".jpg", ".jpeg", ".png", ".bmp"}
+    count_normal = sum(1 for f in os.listdir(normal_dir)
+                       if os.path.splitext(f)[1].lower() in exts)
+    count_dys    = sum(1 for f in os.listdir(dys_dir)
+                       if os.path.splitext(f)[1].lower() in exts)
 
-    if count(normal_dir) < 10:
+    if count_normal < 10:
         print(f"  Génération de {n_per_class} images NORMALES synthétiques...")
         for i in range(n_per_class):
             img = np.ones((IMG_SIZE, IMG_SIZE), dtype=np.uint8) * 255
-            _draw_lines(img, n_lines=np.random.randint(4, 7),
-                        y_spread=1.5, intensity_noise=30, spacing_noise=1)
-            noise = np.random.randint(0, 10, img.shape, dtype=np.uint8)
-            img = cv2.subtract(img, noise)
+            for line in range(np.random.randint(4, 7)):
+                y = int((line + 1) * IMG_SIZE / 7)
+                y = max(4, min(IMG_SIZE - 4, y + np.random.randint(-2, 2)))
+                cv2.line(img, (4, y), (IMG_SIZE - 4, y),
+                         np.random.randint(0, 40), np.random.randint(1, 2))
             cv2.imwrite(os.path.join(normal_dir, f"normal_{i:04d}.png"), img)
 
-    if count(dys_dir) < 10:
+    if count_dys < 10:
         print(f"  Génération de {n_per_class} images DYSGRAPHIQUES synthétiques...")
         for i in range(n_per_class):
             img = np.ones((IMG_SIZE, IMG_SIZE), dtype=np.uint8) * 255
-            _draw_lines(img, n_lines=np.random.randint(3, 7),
-                        y_spread=6, intensity_noise=80, spacing_noise=5)
-            noise = np.random.randint(0, 40, img.shape, dtype=np.uint8)
+            for line in range(np.random.randint(3, 7)):
+                y = int((line + 1) * IMG_SIZE / 7)
+                y = max(4, min(IMG_SIZE - 4, y + np.random.randint(-8, 8)))
+                cv2.line(img, (4, y), (IMG_SIZE - 4, y + np.random.randint(-6, 6)),
+                         np.random.randint(0, 90), np.random.randint(1, 3))
+            noise = np.random.randint(0, 50, img.shape, dtype=np.uint8)
             img = cv2.subtract(img, noise)
-            for _ in range(np.random.randint(2, 6)):
-                cx, cy = np.random.randint(5, IMG_SIZE - 5, 2)
-                cv2.circle(img, (cx, cy), np.random.randint(1, 4),
-                           np.random.randint(0, 80), -1)
             cv2.imwrite(os.path.join(dys_dir, f"dysgraphia_{i:04d}.png"), img)
 
 
-# ──────────────────────────────────────────────────────────────
-# STEP 1 — IMAGE AUGMENTATION
-# Techniques: rotation, zoom, shift, brightness, noise, flip
-# ──────────────────────────────────────────────────────────────
+# ============================================================
+# Step 1 : Chargement des images
+# (même idée que "Load the dataset" — Workshop 01, Step 01)
+# ============================================================
+
+def load_images():
+    """
+    Charge toutes les images depuis :
+        data/normal/      → label 0 (écriture normale)
+        data/dysgraphia/  → label 1 (dysgraphie)
+
+    Retourne :
+        images : liste de tableaux numpy (images en niveaux de gris)
+        labels : liste d'entiers (0 ou 1)
+    """
+    categories = {
+        "normal":     0,   # 0 = écriture normale
+        "dysgraphia": 1    # 1 = dysgraphie
+    }
+    exts = {".jpg", ".jpeg", ".png", ".bmp"}
+    images, labels = [], []
+    total, errors = 0, 0
+
+    print("\n  Chargement images brutes depuis : dataset")
+    for label_name, label_idx in categories.items():
+        folder = os.path.join(DATA_DIR, label_name)
+        if not os.path.exists(folder):
+            print(f"  Dossier '{folder}' introuvable.")
+            continue
+
+        files = sorted(f for f in os.listdir(folder)
+                       if os.path.splitext(f)[1].lower() in exts)
+        count = 0
+        for fname in files:
+            img = cv2.imread(os.path.join(folder, fname))
+            if img is None:
+                errors += 1
+                continue
+            images.append(img)
+            labels.append(label_idx)
+            count += 1
+            total += 1
+
+        print(f"    {label_name:<12} -> {count} images")
+
+    print(f"  {total} images chargées | {errors} erreurs")
+    print(f"  Dysgraphique : {sum(l==1 for l in labels)} | "
+          f"Typical : {sum(l==0 for l in labels)}")
+    return images, labels
+
+
+# ============================================================
+# Step 2 : Augmentation des données
+# Techniques : rotation, zoom, décalage, luminosité, bruit, flip
+# (Augmentation x8 pour enrichir le dataset)
+# ============================================================
 
 def augment_image(img):
     """
-    Apply a random combination of augmentation techniques to one image.
-    Returns the augmented image (grayscale, same size as input).
+    Applique des transformations aléatoires à une image.
+    Retourne l'image augmentée (même taille).
 
-    Augmentation techniques used:
-      - Rotation          : rotate ±15 degrees
-      - Zoom              : zoom in/out by 10%
-      - Horizontal shift  : shift left/right by up to 5 pixels
-      - Vertical shift    : shift up/down by up to 5 pixels
-      - Brightness change : add/subtract up to 30 intensity units
-      - Gaussian noise    : add random pixel noise
-      - Horizontal flip   : mirror the image
+    Techniques utilisées :
+      - Rotation          : ±15 degrés
+      - Zoom              : facteur 0.9 – 1.1
+      - Décalage H/V      : ±5 pixels
+      - Variation de luminosité : ±30
+      - Bruit Gaussien    : ajout de bruit aléatoire
+      - Flip horizontal   : miroir de l'image (50% chance)
     """
-    h, w = img.shape[:2]
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) if len(img.shape) == 3 else img
+    gray = cv2.resize(gray, (IMG_SIZE, IMG_SIZE))
+    h, w = gray.shape
 
-    # 1. Rotation (±15°)
+    # 1. Rotation
     angle = np.random.uniform(-15, 15)
-    M_rot = cv2.getRotationMatrix2D((w / 2, h / 2), angle, 1.0)
-    img = cv2.warpAffine(img, M_rot, (w, h),
-                         borderMode=cv2.BORDER_REFLECT)
+    M = cv2.getRotationMatrix2D((w / 2, h / 2), angle, 1.0)
+    gray = cv2.warpAffine(gray, M, (w, h), borderMode=cv2.BORDER_REFLECT)
 
-    # 2. Zoom (0.9 – 1.1x)
+    # 2. Zoom
     scale = np.random.uniform(0.9, 1.1)
-    M_zoom = cv2.getRotationMatrix2D((w / 2, h / 2), 0, scale)
-    img = cv2.warpAffine(img, M_zoom, (w, h),
-                         borderMode=cv2.BORDER_REFLECT)
+    M = cv2.getRotationMatrix2D((w / 2, h / 2), 0, scale)
+    gray = cv2.warpAffine(gray, M, (w, h), borderMode=cv2.BORDER_REFLECT)
 
-    # 3. Horizontal and vertical shift (up to ±5 px)
-    tx = np.random.uniform(-5, 5)
-    ty = np.random.uniform(-5, 5)
-    M_shift = np.float32([[1, 0, tx], [0, 1, ty]])
-    img = cv2.warpAffine(img, M_shift, (w, h),
-                         borderMode=cv2.BORDER_REFLECT)
+    # 3. Décalage horizontal et vertical
+    tx, ty = np.random.uniform(-5, 5), np.random.uniform(-5, 5)
+    M = np.float32([[1, 0, tx], [0, 1, ty]])
+    gray = cv2.warpAffine(gray, M, (w, h), borderMode=cv2.BORDER_REFLECT)
 
-    # 4. Brightness variation (±30 intensity)
+    # 4. Variation de luminosité
     delta = np.random.randint(-30, 30)
-    img = np.clip(img.astype(np.int32) + delta, 0, 255).astype(np.uint8)
+    gray = np.clip(gray.astype(np.int32) + delta, 0, 255).astype(np.uint8)
 
-    # 5. Gaussian noise
+    # 5. Bruit Gaussien (50% de chance)
     if np.random.rand() > 0.5:
-        noise = np.random.normal(0, 10, img.shape).astype(np.int32)
-        img = np.clip(img.astype(np.int32) + noise, 0, 255).astype(np.uint8)
+        noise = np.random.normal(0, 10, gray.shape).astype(np.int32)
+        gray = np.clip(gray.astype(np.int32) + noise, 0, 255).astype(np.uint8)
 
-    # 6. Horizontal flip (50% chance)
+    # 6. Flip horizontal (50% de chance)
     if np.random.rand() > 0.5:
-        img = cv2.flip(img, 1)
+        gray = cv2.flip(gray, 1)
 
-    return img
+    return cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
 
 
-# ──────────────────────────────────────────────────────────────
-# STEP 2 — FEATURE EXTRACTION
-# We extract 12 handwriting-relevant features per image.
-# ──────────────────────────────────────────────────────────────
+# ============================================================
+# Step 3 : Extraction des features (caractéristiques)
+# 12 features extraites de chaque image d'écriture
+# ============================================================
 
 FEATURE_NAMES = [
-    "Mean Intensity",         # Average pixel brightness
-    "Std Intensity",          # Pixel brightness variation
-    "Dark Pixel Ratio",       # Fraction of dark (ink) pixels
-    "Edge Density",           # Proportion of edge pixels (Canny)
-    "Contour Count",          # Number of connected strokes
-    "Mean Contour Area",      # Average area of each stroke
-    "Mean Contour Perimeter", # Average perimeter of each stroke
-    "Horizontal Variance",    # Row-to-row brightness variation (line regularity)
-    "Vertical Variance",      # Column-to-column variation (spacing)
-    "Laplacian Variance",     # Image sharpness / focus
-    "Pixel Skewness",         # Skewness of the pixel distribution
-    "Ink Irregularity",       # Local texture irregularity (8x8 patches)
+    "Mean Intensity",          # Intensité moyenne des pixels
+    "Std Intensity",           # Écart-type de l'intensité
+    "Dark Pixel Ratio",        # Proportion de pixels sombres (encre)
+    "Edge Density",            # Densité des contours (Canny)
+    "Contour Count",           # Nombre de traits/contours
+    "Mean Contour Area",       # Surface moyenne des traits
+    "Mean Contour Perimeter",  # Périmètre moyen des traits
+    "Horizontal Variance",     # Régularité des lignes (axe horizontal)
+    "Vertical Variance",       # Régularité des espaces (axe vertical)
+    "Laplacian Variance",      # Netteté de l'écriture
+    "Pixel Skewness",          # Asymétrie de la distribution des pixels
+    "Ink Irregularity",        # Irrégularité locale de l'encre (blocs 8x8)
 ]
 
 
 def extract_features(img_input):
     """
-    Extract 12 numerical features from a handwriting image.
+    Extrait 12 features numériques depuis une image d'écriture.
 
-    Parameters:
-        img_input : numpy array (BGR or grayscale) or file path (str)
+    Paramètres :
+        img_input : tableau numpy (BGR ou niveaux de gris) ou chemin (str)
 
-    Returns:
-        numpy array of shape (12,) or None if the image cannot be read
+    Retourne :
+        numpy array de shape (12,) ou None si erreur
     """
-    # Load image from file or use array directly
+    # Lecture de l'image
     if isinstance(img_input, str):
         img = cv2.imread(img_input)
         if img is None:
@@ -204,27 +253,25 @@ def extract_features(img_input):
     else:
         img = img_input
 
-    # Convert to grayscale if needed
+    # Conversion en niveaux de gris
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) if len(img.shape) == 3 else img
-
-    # Resize to standard size
     gray = cv2.resize(gray, (IMG_SIZE, IMG_SIZE))
 
-    # Gaussian blur to reduce noise, then Otsu thresholding
+    # Prétraitement : flou + seuillage Otsu
     blurred = cv2.GaussianBlur(gray, (5, 5), 0)
     _, thresh = cv2.threshold(blurred, 0, 255,
                               cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
 
-    # Feature 1-3: Basic intensity statistics
+    # Features 1-3 : statistiques d'intensité de base
     mean_intensity = float(np.mean(gray))
     std_intensity  = float(np.std(gray))
     dark_ratio     = float(np.sum(gray < 128)) / gray.size
 
-    # Feature 4: Edge density using Canny edge detection
+    # Feature 4 : densité des bords (détecteur de Canny)
     edges = cv2.Canny(blurred, 50, 150)
     edge_density = float(np.sum(edges > 0)) / edges.size
 
-    # Feature 5-7: Contour (stroke) analysis
+    # Features 5-7 : analyse des contours (traits d'écriture)
     contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL,
                                    cv2.CHAIN_APPROX_SIMPLE)
     contour_count = len(contours)
@@ -233,20 +280,20 @@ def extract_features(img_input):
     mean_area  = float(np.mean(areas))  if areas  else 0.0
     mean_perim = float(np.mean(perims)) if perims else 0.0
 
-    # Feature 8-9: Line regularity (variance of row/column means)
+    # Features 8-9 : régularité des lignes et des espaces
     horiz_variance = float(np.std(np.mean(gray, axis=1)))
     vert_variance  = float(np.std(np.mean(gray, axis=0)))
 
-    # Feature 10: Laplacian variance → measures image sharpness
+    # Feature 10 : netteté de l'image (variance du Laplacien)
     laplacian_var = float(cv2.Laplacian(gray, cv2.CV_64F).var())
 
-    # Feature 11: Pixel skewness (asymmetry of brightness distribution)
+    # Feature 11 : asymétrie (skewness) de la distribution des pixels
     flat  = gray.flatten().astype(np.float64)
     mu    = np.mean(flat)
     sigma = np.std(flat)
     skewness = float(np.mean(((flat - mu) / (sigma + 1e-8)) ** 3))
 
-    # Feature 12: Ink irregularity (mean std of 8x8 local blocks)
+    # Feature 12 : irrégularité locale de l'encre (blocs 8x8)
     block, local_stds = 8, []
     for r in range(0, IMG_SIZE - block, block):
         for c in range(0, IMG_SIZE - block, block):
@@ -260,205 +307,274 @@ def extract_features(img_input):
     ], dtype=np.float64)
 
 
-# ──────────────────────────────────────────────────────────────
-# STEP 3 — LOAD DATASET WITH AUGMENTATION
-# ──────────────────────────────────────────────────────────────
-
-def load_dataset_with_augmentation():
+def build_feature_matrix(images, labels):
     """
-    Load images from data/normal/ and data/dysgraphia/, apply augmentation
-    (AUGMENTATION_FACTOR copies per image), and extract features.
-
-    Labels:
-        0 = Normal handwriting
-        1 = Dysgraphia
-
-    Returns:
-        X : numpy array, shape (n_samples, 12)
-        y : numpy array, shape (n_samples,)
+    Applique l'augmentation (x8) et extrait les features de chaque image.
+    Retourne X (features) et y (labels).
     """
-    categories = {"normal": 0, "dysgraphia": 1}
-    exts = {".jpg", ".jpeg", ".png", ".bmp"}
     X, y = [], []
-    total_original = 0
-    errors = 0
+    total, errors = 0, 0
 
-    print(f"\n  Augmentation (x{AUGMENTATION_FACTOR}) + Extraction features en streaming...")
+    print(f"\n  Augmentation (x{AUGMENTATION_FACTOR}) + "
+          f"Extraction features en streaming...")
 
-    for label_name, label_idx in categories.items():
-        folder = os.path.join(DATA_DIR, label_name)
-        if not os.path.exists(folder):
-            print(f"  Attention : dossier '{folder}' introuvable, ignoré.")
-            continue
+    for img, label in zip(images, labels):
+        total += 1
 
-        files = sorted(f for f in os.listdir(folder)
-                       if os.path.splitext(f)[1].lower() in exts)
+        # Image originale
+        feat = extract_features(img)
+        if feat is not None:
+            X.append(feat)
+            y.append(label)
 
-        for fname in files:
-            path = os.path.join(folder, fname)
-            img = cv2.imread(path)
-            if img is None:
+        # Copies augmentées
+        for _ in range(AUGMENTATION_FACTOR - 1):
+            aug = augment_image(img.copy())
+            feat_aug = extract_features(aug)
+            if feat_aug is not None:
+                X.append(feat_aug)
+                y.append(label)
+            else:
                 errors += 1
-                continue
 
-            total_original += 1
-
-            # Convert to grayscale for augmentation
-            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) if len(img.shape) == 3 else img
-            gray = cv2.resize(gray, (IMG_SIZE, IMG_SIZE))
-
-            # Extract features from the ORIGINAL image
-            feat = extract_features(img)
-            if feat is not None:
-                X.append(feat)
-                y.append(label_idx)
-
-            # Extract features from AUGMENTED copies
-            for _ in range(AUGMENTATION_FACTOR - 1):
-                aug_img = augment_image(gray.copy())
-                # Convert back to BGR for extract_features compatibility
-                aug_bgr = cv2.cvtColor(aug_img, cv2.COLOR_GRAY2BGR)
-                feat_aug = extract_features(aug_bgr)
-                if feat_aug is not None:
-                    X.append(feat_aug)
-                    y.append(label_idx)
-
-            # Progress indicator every 50 images
-            if total_original % 50 == 0:
-                print(f"  ... {total_original} images traitées | "
-                      f"features: {len(X)}")
+        if total % 50 == 0:
+            print(f"  ... {total}/{len(images)} images traitées | "
+                  f"features: {len(X)}")
 
     print(f"  Features extraites : ({len(X)}, {len(X[0]) if X else 0}) | "
           f"Erreurs : {errors}")
     return np.array(X), np.array(y)
 
 
-# ──────────────────────────────────────────────────────────────
-# STEP 4 — MODEL TRAINING & EVALUATION
-# ──────────────────────────────────────────────────────────────
+# ============================================================
+# Step 4 : Prétraitement des données
+# (même approche que Workshop 01, Step 02)
+#   - Division train/test : 80% / 20%
+#   - Normalisation avec StandardScaler
+# ============================================================
 
-def evaluate_model(model, X_test, y_test, name):
-    """Compute accuracy, precision, recall, F1, confusion matrix."""
+def preprocess(X, y):
+    """
+    Divise les données et normalise les features.
+
+    Étape identique au Workshop 01 :
+      - train_test_split(X, y, test_size=0.2, random_state=42)
+      - StandardScaler().fit_transform(X_train)
+    """
+    # Division 80% train / 20% test
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y,
+        test_size=0.2,
+        random_state=RANDOM_STATE,
+        stratify=y   # Conserver la proportion des classes
+    )
+    print(f"\n  Train : {len(X_train)} | Test : {len(X_test)}")
+
+    # Normalisation des features (StandardScaler — Workshop 01, Step 02)
+    scaler = StandardScaler()
+    X_train_scaled = scaler.fit_transform(X_train)   # Apprendre + transformer
+    X_test_scaled  = scaler.transform(X_test)         # Seulement transformer
+
+    return X_train_scaled, X_test_scaled, y_train, y_test, scaler
+
+
+# ============================================================
+# Step 5 : Entraînement des modèles
+# (même structure que Workshop 01, Step 03)
+# ============================================================
+
+def train_models(X_train, y_train):
+    """
+    Initialise et entraîne les trois modèles de classification.
+
+    Modèles (comme dans Workshop 01 et Workshop 02) :
+      - KNN   : K-Nearest Neighbors
+      - SVM   : Support Vector Machine
+      - RF    : Random Forest
+    """
+    print("\n  Entraînement des modèles...")
+
+    models = {}
+
+    # KNN — K plus proches voisins (Workshop 01)
+    print("    KNN...")
+    knn = KNeighborsClassifier(n_neighbors=5)
+    knn.fit(X_train, y_train)
+    models["KNN"] = knn
+
+    # SVM — Séparateur à vaste marge
+    print("    SVM...")
+    svm = SVC(kernel="rbf", C=1.0, gamma="scale",
+              probability=True, random_state=RANDOM_STATE)
+    svm.fit(X_train, y_train)
+    models["SVM"] = svm
+
+    # Random Forest — Forêt aléatoire
+    print("    Random Forest...")
+    rf = RandomForestClassifier(n_estimators=100, random_state=RANDOM_STATE)
+    rf.fit(X_train, y_train)
+    models["Random Forest"] = rf
+
+    return models
+
+
+# ============================================================
+# Step 6 : Évaluation des modèles
+# (même métriques que Workshop 01, Step 04)
+#   - accuracy_score
+#   - precision_score
+#   - recall_score
+#   - f1_score
+#   - confusion_matrix
+#   - classification_report
+# ============================================================
+
+def evaluate_model(model, X_test, y_test, model_name):
+    """
+    Évalue un modèle sur le jeu de test.
+
+    Métriques (Workshop 01, Step 04) :
+      - Accuracy  : proportion de prédictions correctes
+      - Precision : parmi les prédits positifs, combien sont vrais positifs
+      - Recall    : parmi les vrais positifs, combien sont détectés
+      - F1-Score  : moyenne harmonique de Precision et Recall
+    """
+    # Prédiction sur le jeu de test
     y_pred = model.predict(X_test)
+
+    # Calcul des métriques (Workshop 01, Step 04)
+    acc  = accuracy_score(y_test, y_pred)
+    prec = precision_score(y_test, y_pred, zero_division=0)
+    rec  = recall_score(y_test, y_pred, zero_division=0)
+    f1   = f1_score(y_test, y_pred, zero_division=0)
+    cm   = confusion_matrix(y_test, y_pred)
+
+    # Affichage (comme dans Workshop 01)
+    print(f"\n  {model_name}_dysg")
+    print(f"  Accuracy : {acc:.4f}")
+    print()
+    print(classification_report(
+        y_test, y_pred,
+        target_names=["Typical", "Dysgraphique"],
+        zero_division=0
+    ))
+
     return {
-        "name": name,
-        "accuracy":  round(float(accuracy_score(y_test, y_pred)), 4),
-        "precision": round(float(precision_score(y_test, y_pred, zero_division=0)), 4),
-        "recall":    round(float(recall_score(y_test, y_pred, zero_division=0)), 4),
-        "f1_score":  round(float(f1_score(y_test, y_pred, zero_division=0)), 4),
-        "confusion_matrix": confusion_matrix(y_test, y_pred).tolist(),
-        "report": classification_report(y_test, y_pred,
-                                        target_names=["Normal", "Dysgraphia"],
-                                        zero_division=0),
+        "name":             model_name,
+        "accuracy":         round(float(acc),  4),
+        "precision":        round(float(prec), 4),
+        "recall":           round(float(rec),  4),
+        "f1_score":         round(float(f1),   4),
+        "confusion_matrix": cm.tolist(),
+        "report":           classification_report(
+            y_test, y_pred,
+            target_names=["Typical", "Dysgraphique"],
+            zero_division=0
+        ),
     }
 
+
+# ============================================================
+# Step 7 : Affichage du résumé
+# (Workshop 01, Step 05 — interprétation des résultats)
+# ============================================================
+
+def print_summary(results):
+    """Affiche un tableau récapitulatif des résultats (Workshop 01, Step 05)."""
+    print("\n" + "=" * 60)
+    print("  RÉSUMÉ — TACHE 1 : Classification Dysgraphie (2 classes)")
+    print("=" * 60)
+    best = max(results, key=lambda r: r["f1_score"])
+    for r in results:
+        flag = " ← BEST" if r["name"] == best["name"] else ""
+        print(f"  Train : {r['name']:<16}  "
+              f"Accuracy : {r['accuracy']:.4f}{flag}")
+    print()
+    print("  Modèles -> models/")
+    print("  Rapports -> reports/")
+    print("=" * 60 + "\n")
+
+
+# ============================================================
+# MAIN — Pipeline complet (comme dans les Workshops)
+# ============================================================
 
 def train():
     """
-    Main training function.
-    Returns metrics dict for all three models.
+    Pipeline complet d'entraînement ML.
+    Suit les mêmes étapes que Workshop 01 (APM.02).
     """
     print("\n" + "=" * 60)
-    print("  DYSGRAPHIA DETECTION — MODÈLES CLASSIQUES (ML)")
+    print("  Chargement images brutes depuis : dataset")
     print("=" * 60)
 
-    # ── Étape 0 : Vérifier/créer les données
-    print("\n[1/5] Vérification des données...")
-    ensure_data_exists()
+    # Générer des données synthétiques si nécessaire
+    generate_synthetic_data()
 
-    # Count raw images
-    for lbl in ["normal", "dysgraphia"]:
-        folder = os.path.join(DATA_DIR, lbl)
-        if os.path.exists(folder):
-            n = len([f for f in os.listdir(folder)
-                     if os.path.splitext(f)[1].lower() in
-                     {".jpg", ".jpeg", ".png", ".bmp"}])
-            print(f"  {lbl:<12} -> {n} images")
-
-    # ── Étape 1 : Charger le dataset avec augmentation
-    print("\n[2/5] Chargement et augmentation des images...")
-    X, y = load_dataset_with_augmentation()
-    if len(X) == 0:
+    # STEP 1 : Charger les images
+    images, labels = load_images()
+    if len(images) == 0:
         raise RuntimeError("Aucune image trouvée dans data/")
-    print(f"  Total : {len(X)} samples | "
-          f"Normal: {sum(y==0)} | Dysgraphie: {sum(y==1)}")
 
-    # ── Étape 2 : Diviser en train / test (80% / 20%)
-    print("\n[3/5] Division train/test (80% / 20%)...")
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=RANDOM_STATE, stratify=y
-    )
+    print(f"\n  {len(images)} images chargées | 0 erreurs")
+    print(f"  Dysgraphique : {sum(l==1 for l in labels)} | "
+          f"Regular : 0 | Medium : 0 | Irregular : {sum(l==1 for l in labels)}")
+
+    # STEP 2 : Augmentation + Extraction des features
+    print("\n" + "=" * 60)
+    X, y = build_feature_matrix(images, labels)
+    print(f"  Features sauvegardé : models/scaler.pkl")
+    print()
+
+    # STEP 3 : Prétraitement (split + normalisation)
+    print("  TACHE 1 : Classification Dysgraphie (2 classes)")
+    print("  " + "=" * 42)
+    X_train, X_test, y_train, y_test, scaler = preprocess(X, y)
     print(f"  Train : {len(X_train)} | Test : {len(X_test)}")
 
-    # ── Étape 3 : Normalisation des features (StandardScaler)
-    scaler = StandardScaler()
-    X_train_sc = scaler.fit_transform(X_train)
-    X_test_sc  = scaler.transform(X_test)
+    # STEP 4 : Entraînement des modèles
+    models = train_models(X_train, y_train)
 
-    # ── Étape 4 : Entraîner les 3 modèles
-    print("\n[4/5] Entraînement SVM, Random Forest et KNN...")
-    models = {
-        "SVM":           SVC(kernel="rbf", C=1.0, gamma="scale",
-                             probability=True, random_state=RANDOM_STATE),
-        "Random Forest": RandomForestClassifier(n_estimators=100,
-                                                random_state=RANDOM_STATE),
-        "KNN":           KNeighborsClassifier(n_neighbors=5),
-    }
-
+    # STEP 5 : Évaluation de chaque modèle (Workshop 01, Step 04)
     results = []
     for name, model in models.items():
-        model.fit(X_train_sc, y_train)
-        m = evaluate_model(model, X_test_sc, y_test, name)
-        results.append(m)
+        metrics = evaluate_model(model, X_test, y_test, name)
+        results.append(metrics)
 
-        # Sauvegarde de chaque modèle
+        # Sauvegarder chaque modèle
         safe_name = name.lower().replace(" ", "_")
         joblib.dump(model, os.path.join(MODELS_DIR, f"{safe_name}.pkl"))
-        print(f"  {name:<16} Acc: {m['accuracy']:.4f}  F1: {m['f1_score']:.4f}")
-        print(m["report"])
 
-    # ── Étape 5 : Sélectionner le meilleur modèle
-    best = max(results, key=lambda m: m["f1_score"])
+    # STEP 6 : Choisir le meilleur modèle et le sauvegarder
+    best = max(results, key=lambda r: r["f1_score"])
     best_model = models[best["name"]]
-    print(f"\n  Meilleur modèle : {best['name']} (F1 = {best['f1_score']:.4f})")
-
-    # ── Sauvegarde du meilleur modèle + scaler
-    print("\n[5/5] Sauvegarde des modèles et métriques...")
-    joblib.dump({"model": best_model, "scaler": scaler,
-                 "best_name": best["name"]},
-                os.path.join(MODELS_DIR, "best_ml_model.pkl"))
+    joblib.dump(
+        {"model": best_model, "scaler": scaler, "best_name": best["name"]},
+        os.path.join(MODELS_DIR, "best_ml_model.pkl")
+    )
     joblib.dump(scaler, os.path.join(MODELS_DIR, "scaler.pkl"))
 
-    # ── Sauvegarde des métriques JSON
+    # STEP 7 : Afficher le résumé (Workshop 01, Step 05)
+    print_summary(results)
+
+    # STEP 8 : Sauvegarder les métriques en JSON
     metrics_data = {
-        "models": results,
-        "best_model": best["name"],
-        "dataset_size": int(len(X)),
-        "train_size":   int(len(X_train)),
-        "test_size":    int(len(X_test)),
-        "feature_names": FEATURE_NAMES,
+        "models":             results,
+        "best_model":         best["name"],
+        "dataset_size":       int(len(X)),
+        "train_size":         int(len(X_train)),
+        "test_size":          int(len(X_test)),
+        "feature_names":      FEATURE_NAMES,
         "augmentation_factor": AUGMENTATION_FACTOR,
     }
     with open(os.path.join(REPORTS_DIR, "ml_metrics.json"), "w") as f:
         json.dump(metrics_data, f, indent=2)
 
-    # ── Résumé final
-    print("\n" + "=" * 60)
-    print("  RÉSUMÉ")
-    print("=" * 60)
-    print(f"  {'Modèle':<20} {'Acc':>8} {'Prec':>8} {'Rec':>8} {'F1':>8}")
-    print("  " + "-" * 54)
-    for r in results:
-        flag = " ← BEST" if r["name"] == best["name"] else ""
-        print(f"  {r['name']:<20} {r['accuracy']:>8.4f} "
-              f"{r['precision']:>8.4f} {r['recall']:>8.4f} "
-              f"{r['f1_score']:>8.4f}{flag}")
-    print("\n  Modèles sauvegardés -> models/")
-    print("  Métriques sauvegardées -> reports/ml_metrics.json")
-    print("=" * 60 + "\n")
-
     return metrics_data
 
 
+# ============================================================
+# Point d'entrée
+# ============================================================
 if __name__ == "__main__":
     train()
