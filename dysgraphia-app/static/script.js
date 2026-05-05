@@ -1,95 +1,71 @@
-/* ================================================================
-   script.js — Frontend JavaScript
-   DysDetect | APM.02 | Master 1 STIC | 2025-2026
-   Dr. NECIBI Khaled | Université Constantine 2
-   ================================================================ */
-
 'use strict';
+/* ============================================================
+   script.js — DysDetect Frontend
+   APM.02 · Master 1 STIC · Dr. NECIBI Khaled · 2025/2026
+   ============================================================ */
 
 // ── State
-let selectedFile = null;
-let selectedModel = 'cnn';    // 'cnn' or 'ml'
-let metricsLoaded = false;
-let dashLoaded = false;
-let barChart = null;
-let histChart = null;
+let selFile   = null;
+let selModel  = 'cnn';
+let dashReady = false;
+let evalReady = false;
+let chartBar  = null;
+let chartHist = null;
 
-// ── DOM helper
 const $ = id => document.getElementById(id);
 
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// PAGE NAVIGATION
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// ──────────────────────────────────────────────────────────────
+// NAVIGATION
+// ──────────────────────────────────────────────────────────────
 function switchPage(name) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   const page = $(`page-${name}`);
-  if (page) page.classList.add('active');
-  const link = document.querySelector(`[data-page="${name}"]`);
-  if (link) link.classList.add('active');
-
-  // Lazy-load data
-  if (name === 'evaluate' && !metricsLoaded) loadMetrics();
-  if (name === 'dashboard' && !dashLoaded)   loadDashboard();
+  if (page) { page.classList.add('active'); page.classList.add('fade-in'); }
+  const btn = document.querySelector(`[data-page="${name}"]`);
+  if (btn) btn.classList.add('active');
+  if (name === 'dashboard' && !dashReady) loadDashboard();
+  if (name === 'evaluate'  && !evalReady) loadEvaluation();
 }
 
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// ──────────────────────────────────────────────────────────────
 // MODEL SELECTOR
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function selectModel(model) {
-  selectedModel = model;
-  document.querySelectorAll('.pill').forEach(p => {
-    p.classList.toggle('active', p.dataset.model === model);
-  });
+// ──────────────────────────────────────────────────────────────
+function selectModel(m) {
+  selModel = m;
+  document.querySelectorAll('.mpill').forEach(p =>
+    p.classList.toggle('active', p.dataset.model === m));
 }
 
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// FILE UPLOAD + DRAG & DROP
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// ──────────────────────────────────────────────────────────────
+// FILE UPLOAD / DRAG & DROP
+// ──────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
-  const dropZone = $('dropZone');
-  const fileInput = $('fileInput');
-  if (!dropZone) return;
+  const zone  = $('dropZone');
+  const input = $('fileInput');
+  if (!zone) return;
 
-  // Click → open file dialog
-  dropZone.addEventListener('click', () => fileInput.click());
-  dropZone.addEventListener('keydown', e => {
-    if (e.key === 'Enter' || e.key === ' ') fileInput.click();
-  });
+  zone.addEventListener('click', () => input.click());
+  zone.addEventListener('keydown', e => { if (e.key === 'Enter') input.click(); });
+  input.addEventListener('change', () => { if (input.files[0]) useFile(input.files[0]); });
 
-  // File selected via dialog
-  fileInput.addEventListener('change', () => {
-    if (fileInput.files[0]) handleFile(fileInput.files[0]);
-  });
-
-  // Drag events
-  ['dragenter', 'dragover'].forEach(evt =>
-    dropZone.addEventListener(evt, e => {
-      e.preventDefault(); dropZone.classList.add('drag-over');
-    })
-  );
-  ['dragleave', 'drop'].forEach(evt =>
-    dropZone.addEventListener(evt, e => {
-      e.preventDefault(); dropZone.classList.remove('drag-over');
-    })
-  );
-  dropZone.addEventListener('drop', e => {
-    const file = e.dataTransfer.files[0];
-    if (file) handleFile(file);
+  ['dragenter','dragover'].forEach(ev =>
+    zone.addEventListener(ev, e => { e.preventDefault(); zone.classList.add('over'); }));
+  ['dragleave','drop'].forEach(ev =>
+    zone.addEventListener(ev, e => { e.preventDefault(); zone.classList.remove('over'); }));
+  zone.addEventListener('drop', e => {
+    const f = e.dataTransfer.files[0];
+    if (f) useFile(f);
   });
 });
 
-function handleFile(file) {
-  const allowed = ['image/png', 'image/jpeg', 'image/jpg',
-                   'image/bmp', 'image/gif', 'image/webp'];
-  if (!allowed.includes(file.type)) {
-    showToast('Type de fichier non supporté. Utilisez PNG, JPG ou BMP.', 'error');
-    return;
-  }
-  selectedFile = file;
+function useFile(file) {
+  const ok = ['image/png','image/jpeg','image/jpg','image/bmp','image/gif','image/webp'];
+  if (!ok.includes(file.type)) { toast('Type non supporté. Utilisez PNG, JPG ou BMP.', 'err'); return; }
+  selFile = file;
   showPreview(file);
-  resetResult();
-  $('predictBtn').disabled = false;
+  clearResult();
+  $('analyzeBtn').disabled = false;
 }
 
 function showPreview(file) {
@@ -98,244 +74,213 @@ function showPreview(file) {
     const img = $('previewImg');
     img.src = e.target.result;
     img.onload = () => {
-      $('previewInfo').textContent =
-        `${file.name} · ${img.naturalWidth}×${img.naturalHeight}px · ${fmtBytes(file.size)}`;
+      $('previewMeta').textContent =
+        `${file.name}  ·  ${img.naturalWidth}×${img.naturalHeight}px  ·  ${fmtSize(file.size)}`;
     };
-    $('previewSection').classList.remove('hidden');
     $('dropZone').classList.add('hidden');
+    $('previewBox').classList.remove('hidden');
   };
   reader.readAsDataURL(file);
 }
 
 function clearImage() {
-  selectedFile = null;
+  selFile = null;
   $('fileInput').value = '';
-  $('previewSection').classList.add('hidden');
+  $('previewBox').classList.add('hidden');
   $('dropZone').classList.remove('hidden');
-  $('predictBtn').disabled = true;
-  resetResult();
+  $('analyzeBtn').disabled = true;
+  clearResult();
 }
 
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// ──────────────────────────────────────────────────────────────
 // PREDICTION
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// ──────────────────────────────────────────────────────────────
 async function runPrediction() {
-  if (!selectedFile) return;
-
-  const btn       = $('predictBtn');
-  const btnText   = $('btnText');
-  const spinner   = $('btnSpinner');
-
-  btn.disabled = true;
-  btnText.textContent = 'Analyse en cours…';
-  spinner.classList.remove('hidden');
-
-  const formData = new FormData();
-  formData.append('image', selectedFile);
-  formData.append('model', selectedModel);   // send chosen model to Flask
-
+  if (!selFile) return;
+  setBtnLoading(true);
+  const fd = new FormData();
+  fd.append('image', selFile);
+  fd.append('model', selModel);
   try {
-    const res  = await fetch('/predict', { method: 'POST', body: formData });
+    const res  = await fetch('/predict', { method: 'POST', body: fd });
     const data = await res.json();
-    if (data.error) { showError(data.error); return; }
-    displayResult(data);
-  } catch (err) {
-    showError('Erreur réseau. Veuillez réessayer.');
-    console.error(err);
+    data.error ? showErr(data.error) : showResult(data);
+  } catch(e) {
+    showErr('Erreur réseau. Vérifiez que le serveur est actif.');
   } finally {
-    btn.disabled = false;
-    btnText.textContent = "Analyser l'écriture";
-    spinner.classList.add('hidden');
+    setBtnLoading(false);
   }
 }
 
-function displayResult(data) {
-  const isDys = data.prediction === 1;
+function setBtnLoading(on) {
+  $('analyzeBtn').disabled = on;
+  $('btnLabel').textContent = on ? 'Analyse en cours…' : "Analyser l'écriture";
+  $('btnSpin').classList.toggle('hidden', !on);
+}
 
-  // Show section
-  $('resultSection').classList.remove('hidden');
-  $('resultPlaceholder').classList.add('hidden');
-  $('resultContent').classList.remove('hidden');
+function showResult(d) {
+  const isDys = d.prediction === 1;
+
+  $('resultEmpty').classList.add('hidden');
+  $('resultData').classList.remove('hidden');
 
   // Banner
-  const banner = $('resultBanner');
-  banner.className = `result-banner ${isDys ? 'dysgraphia' : 'normal'}`;
-  const icon = $('resultIcon');
-  icon.className = `result-icon ${isDys ? 'dysgraphia' : 'normal'}`;
+  const banner = $('verdictBanner');
+  banner.className = `verdict-banner ${isDys ? 'is-dysgraphia' : 'is-normal'}`;
+  const icon = $('verdictIcon');
+  icon.className = `verdict-icon ${isDys ? 'is-dysgraphia' : 'is-normal'}`;
   icon.textContent = isDys ? '⚠' : '✓';
-  $('resultLabel').textContent = data.label;
-  $('resultLabel').style.color = isDys ? 'var(--red)' : 'var(--green)';
-  $('resultConfidence').textContent = `Confiance : ${data.confidence.toFixed(1)}%`;
-  $('resultModelTag').textContent   = `Modèle : ${data.model_used}`;
+  $('verdictLabel').textContent = d.label;
+  $('verdictLabel').style.color = isDys ? 'var(--red)' : 'var(--green)';
+  $('verdictConf').textContent  = `Confiance : ${d.confidence.toFixed(1)} %`;
+  $('verdictModel').textContent = `Modèle : ${d.model_used}`;
 
-  // Probability bars (animated after tiny delay)
+  // Bars (delayed for animation)
   setTimeout(() => {
-    $('probNormal').style.width = `${data.probabilities.normal}%`;
-    $('probDys').style.width    = `${data.probabilities.dysgraphia}%`;
-    $('probNormalVal').textContent = `${data.probabilities.normal.toFixed(1)}%`;
-    $('probDysVal').textContent    = `${data.probabilities.dysgraphia.toFixed(1)}%`;
-  }, 60);
+    $('barNormal').style.width = `${d.probabilities.normal}%`;
+    $('barDys').style.width    = `${d.probabilities.dysgraphia}%`;
+    $('valNormal').textContent = `${d.probabilities.normal.toFixed(1)} %`;
+    $('valDys').textContent    = `${d.probabilities.dysgraphia.toFixed(1)} %`;
+  }, 50);
 
-  // Feature grid
-  const grid = $('featureGrid');
+  // Features
+  const grid = $('featGrid');
   grid.innerHTML = '';
-  (data.features || []).forEach(f => {
+  (d.features || []).forEach(f => {
     const el = document.createElement('div');
-    el.className = 'feature-item';
+    el.className = 'feat-item';
     el.innerHTML = `<div class="feat-name">${esc(f.name)}</div>
                     <div class="feat-val">${Number(f.value).toFixed(4)}</div>`;
     grid.appendChild(el);
   });
 
-  // Alert message
-  const alert = $('resultAlert');
+  // Clinic message
+  const msg = $('clinicMsg');
   if (isDys) {
-    alert.className = 'alert show danger';
-    alert.textContent = '⚠ Signes potentiels de dysgraphie détectés. '
-      + "Ceci est un outil académique — consultez un spécialiste pour un diagnostic clinique.";
+    msg.className = 'clinic-msg show warn';
+    msg.textContent = '⚠  Signes potentiels de dysgraphie détectés. '
+      + "Cet outil est académique — consultez un spécialiste pour un diagnostic clinique.";
   } else {
-    alert.className = 'alert show success';
-    alert.textContent = '✓ Aucun signe significatif de dysgraphie détecté dans cet échantillon.';
+    msg.className = 'clinic-msg show ok';
+    msg.textContent = '✓  Aucun signe significatif de dysgraphie détecté dans cet échantillon.';
   }
-
-  $('resultSection').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
-function showError(msg) {
-  $('resultSection').classList.remove('hidden');
-  $('resultPlaceholder').classList.add('hidden');
-  $('resultContent').classList.remove('hidden');
-
-  $('resultBanner').className = 'result-banner dysgraphia';
-  $('resultIcon').className   = 'result-icon dysgraphia';
-  $('resultIcon').textContent = '✕';
-  $('resultLabel').textContent = 'Analyse échouée';
-  $('resultLabel').style.color = 'var(--red)';
-  $('resultConfidence').textContent = msg;
-  $('resultModelTag').textContent   = '';
-  $('probNormal').style.width = '0%';
-  $('probDys').style.width    = '0%';
-  $('probNormalVal').textContent = '—';
-  $('probDysVal').textContent    = '—';
-  $('featureGrid').innerHTML = '';
-
-  const alert = $('resultAlert');
-  alert.className = 'alert show danger';
-  alert.textContent = `Erreur : ${msg}`;
+function showErr(msg) {
+  $('resultEmpty').classList.add('hidden');
+  $('resultData').classList.remove('hidden');
+  $('verdictBanner').className = 'verdict-banner is-dysgraphia';
+  $('verdictIcon').className   = 'verdict-icon is-dysgraphia';
+  $('verdictIcon').textContent = '✕';
+  $('verdictLabel').textContent = 'Erreur d\'analyse';
+  $('verdictLabel').style.color = 'var(--red)';
+  $('verdictConf').textContent  = msg;
+  $('verdictModel').textContent = '';
+  $('barNormal').style.width = '0%';
+  $('barDys').style.width    = '0%';
+  $('valNormal').textContent = '—';
+  $('valDys').textContent    = '—';
+  $('featGrid').innerHTML    = '';
+  $('clinicMsg').className   = 'clinic-msg';
 }
 
-function resetResult() {
-  $('resultSection').classList.add('hidden');
-  $('resultContent').classList.add('hidden');
-  $('resultPlaceholder').classList.remove('hidden');
+function clearResult() {
+  $('resultData').classList.add('hidden');
+  $('resultEmpty').classList.remove('hidden');
+  $('clinicMsg').className = 'clinic-msg';
 }
 
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// ──────────────────────────────────────────────────────────────
 // DASHBOARD
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// ──────────────────────────────────────────────────────────────
 async function loadDashboard() {
-  $('dashLoading').style.display = 'flex';
-  $('dashContent').classList.add('hidden');
-
+  $('dashLoad').style.display = 'flex';
+  $('dashMain').classList.add('hidden');
   try {
-    const res  = await fetch('/api/dashboard');
-    const data = await res.json();
-    if (data.error) throw new Error(data.error);
-    renderDashboard(data);
-    dashLoaded = true;
-  } catch (err) {
-    $('dashLoadingMsg').textContent = `Erreur : ${err.message}`;
+    const r = await fetch('/api/dashboard');
+    const d = await r.json();
+    if (d.error) throw new Error(d.error);
+    renderDashboard(d);
+    dashReady = true;
+  } catch(e) {
+    $('dashLoadMsg').textContent = `Erreur : ${e.message}`;
   }
 }
 
-function renderDashboard(data) {
-  const models = data.models;
-  const best   = data.best_model;
-  const ds     = data.dataset || {};
+function reloadDash() { dashReady = false; loadDashboard(); }
 
-  // ── Summary cards
-  const bestM = models.find(m => m.name === best) || models[0];
-  const summaryItems = [
-    { label: 'Meilleur Modèle',  value: best,              sub: 'F1-Score le plus élevé', cls: 'c-accent' },
-    { label: 'Meilleure Acc.',   value: pct(bestM.accuracy), sub: best,                   cls: 'c-green' },
-    { label: 'Meilleur F1',      value: pct(bestM.f1_score), sub: best,                   cls: 'c-blue' },
-    { label: 'Modèles Testés',   value: models.length,     sub: 'CNN + ML classiques',    cls: 'c-amber' },
-    { label: 'Augmentation',     value: `×${ds.augmentation || '—'}`, sub: 'Facteur d\'augm.', cls: 'c-cyan' },
-  ];
-  $('summaryRow').innerHTML = summaryItems.map(s => `
-    <div class="summary-card ${s.cls}">
-      <div class="sc-label">${s.label}</div>
-      <div class="sc-value">${s.value}</div>
-      <div class="sc-sub">${s.sub}</div>
-    </div>
-  `).join('');
+function renderDashboard(d) {
+  const models = d.models;
+  const best   = d.best_model;
+  const ds     = d.dataset || {};
+  const bestM  = models.find(m => m.name === best) || models[0];
 
-  // ── Bar chart: all models vs all metrics
-  const labels  = models.map(m => m.name);
-  const accData = models.map(m => (m.accuracy  * 100).toFixed(1));
-  const precData= models.map(m => (m.precision * 100).toFixed(1));
-  const recData = models.map(m => (m.recall    * 100).toFixed(1));
-  const f1Data  = models.map(m => (m.f1_score  * 100).toFixed(1));
+  // ── KPIs
+  $('kpiRow').innerHTML = [
+    { label: 'Meilleur Modèle',  value: best,                sub: 'F1-Score le plus élevé', cls: 'k-purple' },
+    { label: 'Accuracy Max',     value: pct(bestM.accuracy), sub: best,                      cls: 'k-green'  },
+    { label: 'F1-Score Max',     value: pct(bestM.f1_score), sub: best,                      cls: 'k-blue'   },
+    { label: 'Modèles Testés',   value: models.length,       sub: 'CNN + ML classiques',     cls: 'k-amber'  },
+    { label: 'Augmentation',     value: `×${ds.augmentation||'—'}`, sub: 'Facteur',          cls: 'k-cyan'   },
+  ].map(k => `
+    <div class="kpi-card ${k.cls}">
+      <div class="kpi-label">${k.label}</div>
+      <div class="kpi-value">${k.value}</div>
+      <div class="kpi-sub">${k.sub}</div>
+    </div>`).join('');
 
-  if (barChart) barChart.destroy();
-  const bCtx = document.getElementById('barChart').getContext('2d');
-  barChart = new Chart(bCtx, {
+  // ── Bar chart
+  const labels   = models.map(m => m.name);
+  const colors   = { acc:'rgba(99,102,241,.8)', prec:'rgba(168,85,247,.8)', rec:'rgba(6,182,212,.8)', f1:'rgba(34,197,94,.8)' };
+  if (chartBar) chartBar.destroy();
+  chartBar = new Chart($('chartBar').getContext('2d'), {
     type: 'bar',
     data: {
       labels,
       datasets: [
-        { label: 'Accuracy',   data: accData,  backgroundColor: 'rgba(99,102,241,0.75)'  },
-        { label: 'Précision',  data: precData, backgroundColor: 'rgba(168,85,247,0.75)'  },
-        { label: 'Rappel',     data: recData,  backgroundColor: 'rgba(6,182,212,0.75)'   },
-        { label: 'F1-Score',   data: f1Data,   backgroundColor: 'rgba(34,197,94,0.75)'   },
+        { label: 'Accuracy',  data: models.map(m => +(m.accuracy *100).toFixed(2)), backgroundColor: colors.acc },
+        { label: 'Précision', data: models.map(m => +(m.precision*100).toFixed(2)), backgroundColor: colors.prec },
+        { label: 'Rappel',    data: models.map(m => +(m.recall   *100).toFixed(2)), backgroundColor: colors.rec },
+        { label: 'F1-Score',  data: models.map(m => +(m.f1_score *100).toFixed(2)), backgroundColor: colors.f1 },
       ],
     },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { labels: { color: '#8892aa', font: { size: 11 } } } },
-      scales: {
-        x: { ticks: { color: '#8892aa' }, grid: { color: '#1e2540' } },
-        y: { min: 0, max: 100, ticks: { color: '#8892aa', callback: v => v + '%' }, grid: { color: '#1e2540' } },
-      },
-    },
+    options: chartOpts({ yLabel: '%', min: 0, max: 100 }),
   });
 
-  // ── Training history chart (CNN only)
-  if (data.cnn_history && data.cnn_available) {
-    $('historyCard').style.display = '';
-    const h = data.cnn_history;
+  // ── CNN history chart
+  const histCard = $('cnnHistCard');
+  if (d.cnn_history) {
+    histCard.style.display = '';
+    const h = d.cnn_history;
     const epochs = h.accuracy.map((_, i) => i + 1);
-    if (histChart) histChart.destroy();
-    const hCtx = document.getElementById('historyChart').getContext('2d');
-    histChart = new Chart(hCtx, {
+    if (chartHist) chartHist.destroy();
+    chartHist = new Chart($('chartHist').getContext('2d'), {
       type: 'line',
       data: {
         labels: epochs,
         datasets: [
-          { label: 'Train Acc',   data: h.accuracy.map(v => (v*100).toFixed(2)),     borderColor: '#6366f1', tension: 0.3, fill: false, pointRadius: 2 },
-          { label: 'Val Acc',     data: h.val_accuracy.map(v => (v*100).toFixed(2)), borderColor: '#22c55e', tension: 0.3, fill: false, pointRadius: 2 },
-          { label: 'Train Loss',  data: h.loss.map(v => v.toFixed(4)),               borderColor: '#ef4444', tension: 0.3, fill: false, pointRadius: 2, yAxisID: 'y2' },
-          { label: 'Val Loss',    data: h.val_loss.map(v => v.toFixed(4)),            borderColor: '#f59e0b', tension: 0.3, fill: false, pointRadius: 2, yAxisID: 'y2' },
+          { label: 'Train Acc',  data: h.accuracy.map(v => +(v*100).toFixed(2)),    borderColor: '#6366f1', tension: .35, fill: false, pointRadius: 2 },
+          { label: 'Val Acc',    data: h.val_accuracy.map(v => +(v*100).toFixed(2)),borderColor: '#22c55e', tension: .35, fill: false, pointRadius: 2 },
+          { label: 'Train Loss', data: h.loss.map(v => +v.toFixed(4)),              borderColor: '#ef4444', tension: .35, fill: false, pointRadius: 2, yAxisID: 'y2' },
+          { label: 'Val Loss',   data: h.val_loss.map(v => +v.toFixed(4)),           borderColor: '#f59e0b', tension: .35, fill: false, pointRadius: 2, yAxisID: 'y2' },
         ],
       },
       options: {
         responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { labels: { color: '#8892aa', font: { size: 10 } } } },
+        plugins: { legend: { labels: { color: '#8891a8', font: { size: 11 } } } },
         scales: {
-          x: { ticks: { color: '#8892aa' }, grid: { color: '#1e2540' } },
-          y:  { position: 'left',  ticks: { color: '#8892aa', callback: v => v + '%' }, grid: { color: '#1e2540' }, title: { display: true, text: 'Accuracy (%)', color: '#5a6480' } },
-          y2: { position: 'right', ticks: { color: '#8892aa' }, grid: { drawOnChartArea: false }, title: { display: true, text: 'Loss', color: '#5a6480' } },
+          x:  { ticks: { color: '#8891a8' }, grid: { color: '#1e2640' } },
+          y:  { position: 'left',  min: 0, max: 100, ticks: { color: '#8891a8', callback: v => v + '%' }, grid: { color: '#1e2640' }, title: { display: true, text: 'Accuracy (%)', color: '#525d74' } },
+          y2: { position: 'right', ticks: { color: '#8891a8' }, grid: { drawOnChartArea: false }, title: { display: true, text: 'Loss', color: '#525d74' } },
         },
       },
     });
   } else {
-    $('historyCard').innerHTML = `
-      <div class="card-header"><h3>Historique CNN</h3></div>
-      <div style="padding:24px 24px 28px;text-align:center;color:var(--text-3);font-size:0.86rem">
+    histCard.innerHTML = `
+      <div class="card-head"><h3>Historique CNN</h3><p>Workshop 03 — Plot loss over Epochs</p></div>
+      <div style="padding:32px 24px;text-align:center;color:var(--text-3);font-size:.84rem">
         CNN non encore entraîné.<br/>
-        <button class="btn btn-accent btn-sm" style="margin-top:12px" onclick="retrainCNN()">
-          Entraîner le CNN maintenant
-        </button>
+        <button class="btn-accent" style="margin-top:14px" onclick="trainCNN()">Entraîner le CNN maintenant</button>
       </div>`;
   }
 
@@ -343,212 +288,226 @@ function renderDashboard(data) {
   $('dashTableBody').innerHTML = models.map(m => {
     const isBest = m.name === best;
     const type   = m.name === 'CNN' ? 'dl' : 'ml';
-    const typeLabel = m.name === 'CNN' ? 'Deep Learning' : 'ML Classique';
-    return `
-      <tr class="${isBest ? 'best-row' : ''}">
-        <td>${esc(m.name)}</td>
-        <td><span class="type-badge ${type}">${typeLabel}</span></td>
-        <td>${pct(m.accuracy)}</td>
-        <td>${pct(m.precision)}</td>
-        <td>${pct(m.recall)}</td>
-        <td>${pct(m.f1_score)}</td>
-        <td><span class="status-badge ${isBest ? 'best' : 'other'}">${isBest ? '★ Meilleur' : 'Entraîné'}</span></td>
-      </tr>`;
+    return `<tr class="${isBest ? 'best-row' : ''}">
+      <td>${esc(m.name)}</td>
+      <td><span class="badge-${type}">${m.name==='CNN'?'Deep Learning':'ML Classique'}</span></td>
+      <td>${pct(m.accuracy)}</td>
+      <td>${pct(m.precision)}</td>
+      <td>${pct(m.recall)}</td>
+      <td>${pct(m.f1_score)}</td>
+      <td>${isBest ? '<span class="badge-best">★ Meilleur</span>' : '<span class="badge-ok">Entraîné</span>'}</td>
+    </tr>`;
   }).join('');
 
   // ── Confusion matrices
-  $('dashCmGrid').innerHTML = models.map(m => buildCmHtml(m)).join('');
+  $('dashCmRow').innerHTML = models.map(m => makeCM(m)).join('');
 
   // ── Dataset info
-  if (Object.keys(ds).length) {
-    $('datasetInfo').innerHTML = `
-      <div class="ds-item"><span class="ds-label">Total Samples</span><span class="ds-value">${ds.size || '—'}</span></div>
-      <div class="ds-item"><span class="ds-label">Train</span><span class="ds-value">${ds.train || '—'}</span></div>
-      <div class="ds-item"><span class="ds-label">Test</span><span class="ds-value">${ds.test || '—'}</span></div>
-      <div class="ds-item"><span class="ds-label">Features</span><span class="ds-value">${ds.features || 12}</span></div>
-      <div class="ds-item"><span class="ds-label">Augmentation</span><span class="ds-value">×${ds.augmentation || '—'}</span></div>
-      <div class="ds-item"><span class="ds-label">Split</span><span class="ds-value">80/20</span></div>`;
-  }
+  $('dashDataInfo').innerHTML = [
+    { label: 'Dataset Total', value: ds.size  || '—' },
+    { label: 'Train',         value: ds.train || '—' },
+    { label: 'Test',          value: ds.test  || '—' },
+    { label: 'Features',      value: ds.features || 12 },
+    { label: 'Augmentation',  value: `×${ds.augmentation||1}` },
+    { label: 'Split',         value: '80 / 20' },
+  ].map(x => `<div class="info-item"><span class="info-label">${x.label}</span><span class="info-value">${x.value}</span></div>`).join('');
 
-  $('dashLoading').style.display = 'none';
-  $('dashContent').classList.remove('hidden');
+  $('dashLoad').style.display = 'none';
+  $('dashMain').classList.remove('hidden');
 }
 
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// EVALUATE PAGE (ML only)
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-async function loadMetrics() {
-  $('metricsLoading').style.display = 'flex';
-  $('metricsContent').classList.add('hidden');
+// ──────────────────────────────────────────────────────────────
+// TRAIN CNN
+// ──────────────────────────────────────────────────────────────
+async function trainCNN() {
+  const btn = $('cnnTrainBtn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Entraînement…'; }
+  toast('Entraînement CNN lancé — cela peut prendre plusieurs minutes.', 'info');
   try {
-    const res  = await fetch('/api/metrics');
-    const data = await res.json();
-    if (data.error) throw new Error(data.error);
-    renderMetrics(data);
-    metricsLoaded = true;
-  } catch (err) {
-    $('metricsLoading').innerHTML =
-      `<p style="color:var(--red)">Erreur : ${esc(err.message)}</p>`;
+    const r = await fetch('/api/retrain-cnn', { method: 'POST' });
+    const d = await r.json();
+    if (d.error) throw new Error(d.error);
+    toast(`CNN entraîné ! Accuracy: ${(d.accuracy*100).toFixed(1)}%  F1: ${(d.f1_score*100).toFixed(1)}%`, 'ok');
+    dashReady = false;
+    loadDashboard();
+  } catch(e) {
+    toast(`Erreur CNN : ${e.message}`, 'err');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Entraîner CNN'; }
   }
 }
 
-function renderMetrics(data) {
-  const models = data.models;
-  const best   = data.best_model;
+// ──────────────────────────────────────────────────────────────
+// EVALUATION PAGE
+// ──────────────────────────────────────────────────────────────
+async function loadEvaluation() {
+  $('evalLoad').style.display = 'flex';
+  $('evalMain').classList.add('hidden');
+  try {
+    const r = await fetch('/api/metrics');
+    const d = await r.json();
+    if (d.error) throw new Error(d.error);
+    renderEvaluation(d);
+    evalReady = true;
+  } catch(e) {
+    $('evalLoad').innerHTML = `<p style="color:var(--red)">Erreur : ${esc(e.message)}</p>`;
+  }
+}
 
-  // Summary cards
-  const bestM = models.find(m => m.name === best) || models[0];
-  $('metricsSummary').innerHTML = [
-    { label: 'Meilleur Modèle',   value: best,               sub: 'F1-Score le plus élevé', cls: 'c-accent' },
-    { label: 'Meilleure Accuracy', value: pct(bestM.accuracy), sub: best,                    cls: 'c-green' },
-    { label: 'Meilleur F1-Score',  value: pct(bestM.f1_score), sub: best,                    cls: 'c-blue' },
-    { label: 'Taille Dataset',     value: data.dataset_size,  sub: 'après augmentation',     cls: 'c-amber' },
-  ].map(s => `
-    <div class="summary-card ${s.cls}">
-      <div class="sc-label">${s.label}</div>
-      <div class="sc-value">${s.value}</div>
-      <div class="sc-sub">${s.sub}</div>
+function reloadEval() { evalReady = false; loadEvaluation(); }
+
+function renderEvaluation(d) {
+  const models = d.models;
+  const best   = d.best_model;
+  const bestM  = models.find(m => m.name === best) || models[0];
+
+  // KPIs
+  $('evalKpiRow').innerHTML = [
+    { label: 'Meilleur Modèle',    value: best,                 sub: 'F1-Score max',      cls: 'k-purple' },
+    { label: 'Meilleure Accuracy', value: pct(bestM.accuracy),  sub: best,                cls: 'k-green'  },
+    { label: 'Meilleure Précision',value: pct(bestM.precision), sub: best,                cls: 'k-blue'   },
+    { label: 'Dataset (après aug)',value: d.dataset_size,       sub: 'échantillons total',cls: 'k-amber'  },
+  ].map(k => `
+    <div class="kpi-card ${k.cls}">
+      <div class="kpi-label">${k.label}</div>
+      <div class="kpi-value">${k.value}</div>
+      <div class="kpi-sub">${k.sub}</div>
     </div>`).join('');
 
   // Model cards
-  $('modelsGrid').innerHTML = models.map(m => `
-    <div class="model-card ${m.name === best ? 'best-model' : ''}">
-      <div class="model-card-header">
-        <div class="model-name">${esc(m.name)}</div>
-        ${m.name === best ? '<span class="best-badge">Meilleur</span>' : ''}
+  $('modelsRow').innerHTML = models.map(m => `
+    <div class="model-card ${m.name === best ? 'is-best' : ''}">
+      <div class="mc-header">
+        <div class="mc-name">${esc(m.name)}</div>
+        ${m.name === best ? '<span class="badge-best">★ Meilleur</span>' : ''}
       </div>
-      <div class="metric-rows">
+      <div class="mc-metrics">
         ${['accuracy','precision','recall','f1_score'].map(k => `
-          <div class="metric-row">
-            <div class="metric-label-row">
-              <span class="metric-name">${mlabel(k)}</span>
-              <span class="metric-val">${pct(m[k])}</span>
+          <div class="mc-metric">
+            <div class="mc-meta">
+              <span class="mc-key">${mlabels[k]}</span>
+              <span class="mc-val">${pct(m[k])}</span>
             </div>
-            <div class="metric-track">
-              <div class="metric-fill" style="width:${(m[k]*100).toFixed(1)}%"></div>
+            <div class="mc-bar">
+              <div class="mc-fill" style="width:${(m[k]*100).toFixed(1)}%"></div>
             </div>
           </div>`).join('')}
       </div>
     </div>`).join('');
 
   // Table
-  $('tableBody').innerHTML = models.map(m => `
+  $('evalTableBody').innerHTML = models.map(m => `
     <tr class="${m.name === best ? 'best-row' : ''}">
       <td>${esc(m.name)}</td>
       <td>${pct(m.accuracy)}</td>
       <td>${pct(m.precision)}</td>
       <td>${pct(m.recall)}</td>
       <td>${pct(m.f1_score)}</td>
-      <td><span class="status-badge ${m.name === best ? 'best' : 'other'}">
-        ${m.name === best ? '★ Meilleur' : 'Entraîné'}
-      </span></td>
+      <td>${m.name === best ? '<span class="badge-best">★ Meilleur</span>' : '<span class="badge-ok">Entraîné</span>'}</td>
     </tr>`).join('');
 
   // Confusion matrices
-  $('cmGrid').innerHTML = models.map(m => buildCmHtml(m)).join('');
+  $('evalCmRow').innerHTML = models.map(m => makeCM(m)).join('');
+
+  // Classification reports
+  $('reportsBlock').innerHTML = models.map(m => `
+    <div class="report-block">
+      <div class="report-block-title">${esc(m.name)} — Classification Report</div>
+      <pre class="report-pre">${esc(m.report || '')}</pre>
+    </div>`).join('');
 
   // Dataset info
-  $('datasetCard').innerHTML = `
-    <div class="ds-item"><span class="ds-label">Total Samples</span><span class="ds-value">${data.dataset_size}</span></div>
-    <div class="ds-item"><span class="ds-label">Train</span><span class="ds-value">${data.train_size}</span></div>
-    <div class="ds-item"><span class="ds-label">Test</span><span class="ds-value">${data.test_size}</span></div>
-    <div class="ds-item"><span class="ds-label">Features</span><span class="ds-value">${(data.feature_names||[]).length}</span></div>
-    <div class="ds-item"><span class="ds-label">Augmentation</span><span class="ds-value">×${data.augmentation_factor||1}</span></div>`;
+  $('evalDataInfo').innerHTML = [
+    { label: 'Total Samples',  value: d.dataset_size },
+    { label: 'Train (80%)',    value: d.train_size   },
+    { label: 'Test  (20%)',    value: d.test_size    },
+    { label: 'Features',       value: (d.feature_names||[]).length },
+    { label: 'Augmentation',   value: `×${d.augmentation_factor||1}` },
+    { label: 'Modèles',        value: models.length  },
+  ].map(x => `<div class="info-item"><span class="info-label">${x.label}</span><span class="info-value">${x.value}</span></div>`).join('');
 
-  $('metricsLoading').style.display = 'none';
-  $('metricsContent').classList.remove('hidden');
+  $('evalLoad').style.display = 'none';
+  $('evalMain').classList.remove('hidden');
 }
 
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// RETRAIN CNN
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-async function retrainCNN() {
-  const btn = $('retrainCNNBtn');
-  if (btn) { btn.disabled = true; btn.textContent = 'Entraînement…'; }
-  showToast('Entraînement CNN lancé — cela peut prendre plusieurs minutes.', 'info');
-  try {
-    const res  = await fetch('/api/retrain-cnn', { method: 'POST' });
-    const data = await res.json();
-    if (data.error) throw new Error(data.error);
-    showToast(`CNN entraîné ! Accuracy: ${(data.accuracy*100).toFixed(1)}%  F1: ${(data.f1_score*100).toFixed(1)}%`, 'success');
-    dashLoaded = false;
-    loadDashboard();
-  } catch (err) {
-    showToast(`Erreur CNN : ${err.message}`, 'error');
-  } finally {
-    if (btn) { btn.disabled = false; btn.textContent = 'Entraîner CNN'; }
-  }
-}
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// ──────────────────────────────────────────────────────────────
 // HELPERS
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// ──────────────────────────────────────────────────────────────
 
-/** Build confusion matrix HTML card */
-function buildCmHtml(m) {
+const mlabels = { accuracy:'Accuracy', precision:'Précision', recall:'Rappel', f1_score:'F1-Score' };
+
+function makeCM(m) {
   const cm = m.confusion_matrix;
   if (!cm) return '';
-  const tn = cm[0][0], fp = cm[0][1], fn = cm[1][0], tp = cm[1][1];
+  const [[tn, fp], [fn, tp]] = cm;
   return `
     <div class="cm-card">
-      <div class="cm-title">${esc(m.name)}</div>
+      <div class="cm-name">${esc(m.name)}</div>
       <table class="cm-table">
         <thead>
-          <tr><th></th><th>Prédit Normal</th><th>Prédit Dysgraphie</th></tr>
+          <tr><th></th><th>Prédit Normal</th><th>Prédit Dys.</th></tr>
         </thead>
         <tbody>
-          <tr><td class="row-label">Réel Normal</td><td class="tn">${tn}</td><td class="fp">${fp}</td></tr>
-          <tr><td class="row-label">Réel Dysgraphie</td><td class="fn">${fn}</td><td class="tp">${tp}</td></tr>
+          <tr>
+            <td class="row-lbl">Réel Normal</td>
+            <td class="cell-tn">${tn}</td>
+            <td class="cell-fp">${fp}</td>
+          </tr>
+          <tr>
+            <td class="row-lbl">Réel Dys.</td>
+            <td class="cell-fn">${fn}</td>
+            <td class="cell-tp">${tp}</td>
+          </tr>
         </tbody>
       </table>
+      <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+        <span style="font-size:.7rem;color:var(--text-3)">
+          <span style="color:var(--green);font-weight:700">TP=${tp}</span> ·
+          <span style="color:var(--green);font-weight:700">TN=${tn}</span> ·
+          <span style="color:var(--red)">FP=${fp}</span> ·
+          <span style="color:var(--red)">FN=${fn}</span>
+        </span>
+      </div>
     </div>`;
 }
 
-/** Format a [0,1] value as percentage string */
-function pct(val) {
-  if (val === null || val === undefined) return '—';
-  return (Number(val) * 100).toFixed(2) + '%';
+function chartOpts({ yLabel = '%', min = 0, max = 100 } = {}) {
+  return {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { labels: { color: '#8891a8', font: { size: 11 } } } },
+    scales: {
+      x: { ticks: { color: '#8891a8' }, grid: { color: '#1e2640' } },
+      y: {
+        min, max,
+        ticks: { color: '#8891a8', callback: v => yLabel === '%' ? v + '%' : v },
+        grid:  { color: '#1e2640' },
+      },
+    },
+  };
 }
 
-/** Metric key → human label */
-function mlabel(key) {
-  return { accuracy:'Accuracy', precision:'Précision',
-           recall:'Rappel', f1_score:'F1-Score' }[key] || key;
+function pct(v) {
+  if (v == null) return '—';
+  return (Number(v) * 100).toFixed(2) + ' %';
 }
 
-/** Escape HTML special chars */
-function esc(str) {
+function esc(s) {
   const d = document.createElement('div');
-  d.textContent = String(str);
+  d.textContent = String(s);
   return d.innerHTML;
 }
 
-/** Format file size */
-function fmtBytes(b) {
-  if (b < 1024)       return `${b} B`;
-  if (b < 1024*1024)  return `${(b/1024).toFixed(1)} KB`;
-  return `${(b/1024/1024).toFixed(1)} MB`;
+function fmtSize(b) {
+  if (b < 1024)        return `${b} B`;
+  if (b < 1024 * 1024) return `${(b / 1024).toFixed(1)} KB`;
+  return `${(b / 1048576).toFixed(1)} MB`;
 }
 
-/** Toast notification */
-function showToast(msg, type = 'info') {
-  const existing = document.querySelector('.toast-notif');
-  if (existing) existing.remove();
-  const colors = { success: 'var(--green)', error: 'var(--red)',
-                   info: 'var(--accent-2)' };
-  const t = document.createElement('div');
-  t.className = 'toast-notif';
-  t.style.cssText = `
-    position:fixed;bottom:20px;right:20px;z-index:9999;
-    background:var(--surface);border:1px solid ${colors[type] || 'var(--border)'};
-    color:${colors[type] || 'var(--text)'};
-    padding:11px 16px;border-radius:10px;
-    font-size:0.84rem;font-weight:500;
-    box-shadow:var(--shadow);max-width:320px;
-    animation:fadeIn 0.2s ease;
-    font-family:var(--font);
-  `;
-  t.textContent = msg;
-  document.body.appendChild(t);
-  setTimeout(() => t.remove(), 5000);
+function toast(msg, type = 'info') {
+  document.querySelectorAll('.toast').forEach(t => t.remove());
+  const el = document.createElement('div');
+  el.className = `toast t-${type}`;
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 5500);
 }

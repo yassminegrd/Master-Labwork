@@ -1,386 +1,457 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>DysDetect — Système de Détection de Dysgraphie</title>
-  <link rel="stylesheet" href="/static/style.css" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
-  <!-- Chart.js for dashboard charts -->
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>DysDetect — Détection de la Dysgraphie</title>
+  <link rel="stylesheet" href="/static/style.css"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
 
-  <!-- ═══════════════ NAVBAR ═══════════════ -->
-  <nav class="navbar">
-    <div class="nav-inner">
-      <div class="nav-brand">
-        <div class="brand-icon">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
-          </svg>
-        </div>
-        <span>DysDetect</span>
-        <span class="brand-version">v2.0</span>
+<!-- ═══════════════════════════════════ NAVBAR ═══════════════════════════════════ -->
+<nav class="navbar">
+  <div class="nav-inner">
+    <div class="nav-brand">
+      <div class="brand-logo">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4z"/>
+        </svg>
       </div>
-      <div class="nav-links">
-        <a class="nav-link active" data-page="predict" onclick="switchPage('predict')">Prédiction</a>
-        <a class="nav-link" data-page="dashboard" onclick="switchPage('dashboard')">Dashboard</a>
-        <a class="nav-link" data-page="evaluate" onclick="switchPage('evaluate')">Évaluation</a>
-        <a class="nav-link" data-page="about" onclick="switchPage('about')">À propos</a>
-      </div>
+      <span class="brand-name">DysDetect</span>
+      <span class="brand-tag">v2.0</span>
     </div>
-  </nav>
-
-  <!-- ═══════════════ HERO ═══════════════ -->
-  <header class="hero">
-    <div class="hero-content">
-      <div class="hero-badge">Master 1 STIC · APM.02 · Dr. NECIBI Khaled · 2025/2026</div>
-      <h1 class="hero-title">Détection de la<br /><span class="gradient-text">Dysgraphie</span></h1>
-      <p class="hero-subtitle">
-        Système avancé combinant <strong>Machine Learning</strong> (SVM, RF, KNN) et
-        <strong>Deep Learning</strong> (CNN) pour analyser l'écriture manuscrite et
-        détecter des signes potentiels de dysgraphie.
-      </p>
-      <div class="hero-stats">
-        <div class="stat-chip"><span class="stat-dot green"></span>CNN + 3 Modèles ML</div>
-        <div class="stat-chip"><span class="stat-dot blue"></span>12 Features</div>
-        <div class="stat-chip"><span class="stat-dot purple"></span>Augmentation x8</div>
-        <div class="stat-chip"><span class="stat-dot amber"></span>TensorFlow/Keras</div>
-      </div>
+    <div class="nav-links">
+      <button class="nav-btn active" data-page="predict"    onclick="switchPage('predict')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        Prédiction
+      </button>
+      <button class="nav-btn" data-page="dashboard" onclick="switchPage('dashboard')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        Dashboard
+      </button>
+      <button class="nav-btn" data-page="evaluate"  onclick="switchPage('evaluate')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        Évaluation
+      </button>
+      <button class="nav-btn" data-page="about"     onclick="switchPage('about')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        À propos
+      </button>
     </div>
-  </header>
+  </div>
+</nav>
 
-  <main class="main-content">
+<!-- ═══════════════════════════════════ HERO ═══════════════════════════════════ -->
+<header class="hero">
+  <div class="hero-glow"></div>
+  <div class="hero-inner">
+    <div class="hero-badge">APM.02 · Master 1 STIC · Dr. NECIBI Khaled · Université Constantine 2 · 2025/2026</div>
+    <h1 class="hero-title">Détection de la <span class="text-gradient">Dysgraphie</span></h1>
+    <p class="hero-desc">Système combinant <strong>Machine Learning classique</strong> (SVM, Random Forest, KNN) et <strong>Deep Learning</strong> (CNN) pour analyser l'écriture manuscrite.</p>
+    <div class="hero-pills">
+      <span class="pill-stat"><span class="dot dot-green"></span>3 Modèles ML</span>
+      <span class="pill-stat"><span class="dot dot-blue"></span>CNN TensorFlow</span>
+      <span class="pill-stat"><span class="dot dot-purple"></span>12 Features</span>
+      <span class="pill-stat"><span class="dot dot-amber"></span>Augmentation ×8</span>
+    </div>
+  </div>
+</header>
 
-    <!-- ═══════════════════════════ PAGE PREDICT ═══════════════════════════ -->
-    <section id="page-predict" class="page active">
-      <div class="container">
-        <div class="upload-grid">
+<main>
 
-          <!-- ── Upload Card ── -->
-          <div class="card upload-card">
-            <div class="card-header">
-              <h2>Analyser une Image</h2>
-              <p>Uploadez un échantillon d'écriture manuscrite (PNG, JPG, BMP)</p>
-            </div>
+<!-- ═══════════════════════════════ PAGE : PRÉDICTION ═══════════════════════════════ -->
+<section id="page-predict" class="page active">
+<div class="container">
+  <div class="two-col">
 
-            <!-- Model selector -->
-            <div class="model-selector">
-              <div class="selector-label">Modèle de prédiction :</div>
-              <div class="selector-pills">
-                <button class="pill active" data-model="cnn" onclick="selectModel('cnn')">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
-                  CNN (Deep Learning)
-                </button>
-                <button class="pill" data-model="ml" onclick="selectModel('ml')">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
-                  Meilleur ML
-                </button>
-              </div>
-            </div>
-
-            <!-- Drop zone -->
-            <div id="dropZone" class="drop-zone" tabindex="0" role="button">
-              <div class="drop-icon">
-                <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                  <polyline points="17 8 12 3 7 8"/>
-                  <line x1="12" y1="3" x2="12" y2="15"/>
-                </svg>
-              </div>
-              <p class="drop-text">Glissez-déposez votre image ici</p>
-              <p class="drop-hint">ou cliquez pour parcourir les fichiers</p>
-              <input type="file" id="fileInput" accept="image/*" class="hidden" />
-            </div>
-
-            <!-- Preview -->
-            <div id="previewSection" class="preview-section hidden">
-              <div class="preview-header">
-                <span>Aperçu</span>
-                <button class="btn-ghost btn-sm" onclick="clearImage()">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                  Effacer
-                </button>
-              </div>
-              <div class="preview-wrapper">
-                <img id="previewImg" src="" alt="Aperçu" />
-                <div class="preview-info" id="previewInfo"></div>
-              </div>
-            </div>
-
-            <button id="predictBtn" class="btn btn-primary btn-full" disabled onclick="runPrediction()">
-              <span id="btnText">Analyser l'écriture</span>
-              <div id="btnSpinner" class="spinner hidden"></div>
-            </button>
-          </div>
-
-          <!-- ── Result Card ── -->
-          <div id="resultSection" class="card result-card">
-            <div id="resultPlaceholder" class="result-placeholder">
-              <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" opacity="0.25">
-                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-              </svg>
-              <p>Les résultats apparaîtront ici après l'analyse</p>
-              <p class="placeholder-hint">Uploadez une image et cliquez sur "Analyser"</p>
-            </div>
-
-            <div id="resultContent" class="hidden">
-              <div id="resultBanner" class="result-banner">
-                <div class="result-icon" id="resultIcon"></div>
-                <div class="result-text">
-                  <div class="result-label" id="resultLabel"></div>
-                  <div class="result-confidence" id="resultConfidence"></div>
-                  <div class="result-model-tag" id="resultModelTag"></div>
-                </div>
-              </div>
-
-              <!-- Probability bars -->
-              <div class="prob-section">
-                <div class="prob-row">
-                  <span class="prob-label">Normale</span>
-                  <div class="prob-bar-track"><div class="prob-bar green" id="probNormal"></div></div>
-                  <span class="prob-value" id="probNormalVal">—</span>
-                </div>
-                <div class="prob-row">
-                  <span class="prob-label">Dysgraphie</span>
-                  <div class="prob-bar-track"><div class="prob-bar red" id="probDys"></div></div>
-                  <span class="prob-value" id="probDysVal">—</span>
-                </div>
-              </div>
-
-              <!-- Features grid -->
-              <div class="feature-section">
-                <div class="section-label">Features extraites (12)</div>
-                <div class="feature-grid" id="featureGrid"></div>
-              </div>
-
-              <!-- Alert -->
-              <div class="alert" id="resultAlert"></div>
-            </div>
-          </div>
-
-        </div>
+    <!-- Carte upload -->
+    <div class="card">
+      <div class="card-head">
+        <h2>Analyser une Image</h2>
+        <p>Uploadez un échantillon d'écriture manuscrite (PNG, JPG, BMP)</p>
       </div>
-    </section>
+      <div class="card-body">
 
-    <!-- ═══════════════════════════ PAGE DASHBOARD ═══════════════════════════ -->
-    <section id="page-dashboard" class="page hidden">
-      <div class="container">
-
-        <div class="page-heading">
-          <div>
-            <h2>Dashboard Comparatif</h2>
-            <p>Comparaison de tous les modèles : CNN (Deep Learning) vs SVM, Random Forest, KNN (Machine Learning classique)</p>
-          </div>
-          <div class="heading-actions">
-            <button class="btn btn-outline btn-sm" onclick="loadDashboard()">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.08-4.36"/></svg>
-              Actualiser
+        <!-- Sélecteur de modèle -->
+        <div class="model-bar">
+          <span class="model-bar-label">Modèle :</span>
+          <div class="model-pills">
+            <button class="mpill active" data-model="cnn" onclick="selectModel('cnn')">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+              CNN
             </button>
-            <button class="btn btn-accent btn-sm" onclick="retrainCNN()" id="retrainCNNBtn">
-              Entraîner CNN
+            <button class="mpill" data-model="ml" onclick="selectModel('ml')">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+              Meilleur ML
             </button>
           </div>
         </div>
 
-        <div id="dashLoading" class="loading-state">
-          <div class="loader-ring"></div>
-          <p id="dashLoadingMsg">Chargement des métriques…</p>
+        <!-- Zone de dépôt -->
+        <div id="dropZone" class="dropzone" tabindex="0">
+          <div class="dz-icon">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+          </div>
+          <p class="dz-title">Glissez-déposez votre image ici</p>
+          <p class="dz-sub">ou <span class="dz-link">cliquez pour parcourir</span></p>
+          <p class="dz-formats">PNG · JPG · BMP · GIF · WEBP</p>
+          <input type="file" id="fileInput" accept="image/*" style="display:none"/>
         </div>
 
-        <div id="dashContent" class="hidden">
-
-          <!-- Summary row -->
-          <div class="summary-row" id="summaryRow"></div>
-
-          <!-- Charts row -->
-          <div class="charts-row">
-            <!-- Bar chart: model comparison -->
-            <div class="card chart-card">
-              <div class="card-header">
-                <h3>Comparaison des Modèles</h3>
-                <p>Accuracy, Précision, Rappel, F1-Score</p>
-              </div>
-              <div class="chart-wrapper">
-                <canvas id="barChart"></canvas>
-              </div>
-            </div>
-
-            <!-- CNN training history (only if CNN trained) -->
-            <div class="card chart-card" id="historyCard">
-              <div class="card-header">
-                <h3>Historique d'Entraînement CNN</h3>
-                <p>Perte et précision par époque</p>
-              </div>
-              <div class="chart-wrapper">
-                <canvas id="historyChart"></canvas>
-              </div>
-            </div>
+        <!-- Aperçu -->
+        <div id="previewBox" class="preview-box hidden">
+          <div class="preview-top">
+            <span class="preview-top-label">Aperçu</span>
+            <button class="btn-text" onclick="clearImage()">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              Effacer
+            </button>
           </div>
-
-          <!-- Full comparison table -->
-          <div class="card" style="margin-bottom:24px">
-            <div class="card-header"><h3>Tableau de Comparaison Complet</h3></div>
-            <div class="table-wrapper">
-              <table class="metrics-table" id="dashTable">
-                <thead>
-                  <tr>
-                    <th>Modèle</th><th>Type</th><th>Accuracy</th>
-                    <th>Précision</th><th>Rappel</th><th>F1-Score</th><th>Statut</th>
-                  </tr>
-                </thead>
-                <tbody id="dashTableBody"></tbody>
-              </table>
-            </div>
-          </div>
-
-          <!-- Confusion matrices -->
-          <div class="cm-section">
-            <h3>Matrices de Confusion</h3>
-            <div class="cm-grid" id="dashCmGrid"></div>
-          </div>
-
-          <!-- Dataset info -->
-          <div class="card dataset-info" id="datasetInfo"></div>
-
+          <div class="preview-img-wrap"><img id="previewImg" src="" alt=""/></div>
+          <div class="preview-meta" id="previewMeta"></div>
         </div>
+
+        <button id="analyzeBtn" class="btn-primary" disabled onclick="runPrediction()">
+          <span id="btnLabel">Analyser l'écriture</span>
+          <div id="btnSpin" class="spin hidden"></div>
+        </button>
+
       </div>
-    </section>
-
-    <!-- ═══════════════════════════ PAGE EVALUATE ═══════════════════════════ -->
-    <section id="page-evaluate" class="page hidden">
-      <div class="container">
-        <div class="page-heading">
-          <div>
-            <h2>Résultats d'Évaluation ML</h2>
-            <p>Métriques détaillées pour SVM, Random Forest et KNN (jeu de test 20%).</p>
-          </div>
-          <button class="btn btn-outline btn-sm" onclick="loadMetrics()">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.08-4.36"/></svg>
-            Actualiser
-          </button>
-        </div>
-
-        <div id="metricsLoading" class="loading-state">
-          <div class="loader-ring"></div>
-          <p>Chargement des métriques…</p>
-        </div>
-        <div id="metricsContent" class="hidden">
-          <div class="metrics-summary" id="metricsSummary"></div>
-          <div class="models-grid" id="modelsGrid"></div>
-          <div class="card">
-            <div class="card-header"><h3>Tableau Comparatif</h3></div>
-            <div class="table-wrapper">
-              <table class="metrics-table">
-                <thead>
-                  <tr><th>Modèle</th><th>Accuracy</th><th>Précision</th><th>Rappel</th><th>F1-Score</th><th>Statut</th></tr>
-                </thead>
-                <tbody id="tableBody"></tbody>
-              </table>
-            </div>
-          </div>
-          <div class="cm-section">
-            <h3>Matrices de Confusion</h3>
-            <div class="cm-grid" id="cmGrid"></div>
-          </div>
-          <div class="card dataset-card" id="datasetCard"></div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ═══════════════════════════ PAGE ABOUT ═══════════════════════════ -->
-    <section id="page-about" class="page hidden">
-      <div class="container">
-        <div class="about-grid">
-
-          <div class="card">
-            <div class="card-header"><h2>À Propos du Projet</h2></div>
-            <p class="about-text">Ce système a été développé dans le cadre du cours <strong>Apprentissage par Machine 02 (APM.02)</strong> à l'Université Constantine 2 — Abdelhamid Mehri, sous la supervision du <strong>Dr. NECIBI Khaled</strong>.</p>
-            <p class="about-text">Il combine les techniques de <strong>Machine Learning classique</strong> (SVM, RF, KNN) et de <strong>Deep Learning</strong> (CNN) pour détecter des signes potentiels de dysgraphie à partir d'images d'écriture manuscrite.</p>
-          </div>
-
-          <div class="card">
-            <div class="card-header"><h3>Pipeline Complet</h3></div>
-            <ol class="step-list">
-              <li><div class="step-num">1</div><div><strong>Acquisition</strong> — Collecte d'images manuscrites (dossiers normal/ et dysgraphia/)</div></li>
-              <li><div class="step-num">2</div><div><strong>Augmentation</strong> — Rotation, zoom, décalage, luminosité, bruit (×8)</div></li>
-              <li><div class="step-num">3</div><div><strong>Prétraitement</strong> — Niveaux de gris, Gaussian blur, seuillage Otsu</div></li>
-              <li><div class="step-num">4</div><div><strong>Extraction Features</strong> — 12 features structurelles et texturelles (train_ml.py)</div></li>
-              <li><div class="step-num">5</div><div><strong>CNN</strong> — 3 blocs Conv2D + Dropout + Dense, early stopping (train_cnn.py)</div></li>
-              <li><div class="step-num">6</div><div><strong>Évaluation</strong> — Accuracy, Précision, Rappel, F1, Matrice de Confusion</div></li>
-            </ol>
-          </div>
-
-          <div class="card">
-            <div class="card-header"><h3>Architecture CNN</h3></div>
-            <div class="arch-flow">
-              <div class="arch-block input">Input<br/><small>64×64×1</small></div>
-              <div class="arch-arrow">→</div>
-              <div class="arch-block conv">Conv2D(32)<br/>MaxPool<br/>Dropout</div>
-              <div class="arch-arrow">→</div>
-              <div class="arch-block conv">Conv2D(64)<br/>MaxPool<br/>Dropout</div>
-              <div class="arch-arrow">→</div>
-              <div class="arch-block conv">Conv2D(128)<br/>MaxPool<br/>Dropout</div>
-              <div class="arch-arrow">→</div>
-              <div class="arch-block dense">Dense(256)<br/>Dropout</div>
-              <div class="arch-arrow">→</div>
-              <div class="arch-block output">Sigmoid<br/><small>0/1</small></div>
-            </div>
-            <div class="arch-note">Optimiseur: Adam · Perte: Binary Crossentropy · Early Stopping (patience=8)</div>
-          </div>
-
-          <div class="card">
-            <div class="card-header"><h3>Features Extraites (12)</h3></div>
-            <div class="feature-tags">
-              <span class="tag">Intensité Moyenne</span><span class="tag">Écart-Type</span>
-              <span class="tag">Ratio Pixels Sombres</span><span class="tag">Densité Contours</span>
-              <span class="tag">Nombre Contours</span><span class="tag">Aire Contours Moy.</span>
-              <span class="tag">Périmètre Contours</span><span class="tag">Variance Horizontale</span>
-              <span class="tag">Variance Verticale</span><span class="tag">Variance Laplacien</span>
-              <span class="tag">Asymétrie Pixels</span><span class="tag">Irrégularité Encre</span>
-            </div>
-          </div>
-
-          <div class="card">
-            <div class="card-header"><h3>Stack Technologique</h3></div>
-            <div class="tech-grid">
-              <div class="tech-item"><div class="tech-icon">🐍</div><div><strong>Python 3</strong><br/><small>Langage principal</small></div></div>
-              <div class="tech-item"><div class="tech-icon">🧠</div><div><strong>TensorFlow/Keras</strong><br/><small>CNN (Deep Learning)</small></div></div>
-              <div class="tech-item"><div class="tech-icon">🤖</div><div><strong>scikit-learn</strong><br/><small>SVM, RF, KNN</small></div></div>
-              <div class="tech-item"><div class="tech-icon">👁</div><div><strong>OpenCV</strong><br/><small>Traitement d'image</small></div></div>
-              <div class="tech-item"><div class="tech-icon">🌐</div><div><strong>Flask</strong><br/><small>Application web</small></div></div>
-              <div class="tech-item"><div class="tech-icon">📊</div><div><strong>Chart.js</strong><br/><small>Visualisation</small></div></div>
-            </div>
-          </div>
-
-          <div class="card">
-            <div class="card-header"><h3>Références Académiques</h3></div>
-            <ul class="ref-list">
-              <li>Dr. NECIBI Khaled — <em>Workshops APM.02 (01–04)</em>, Université Constantine 2, 2025/2026.</li>
-              <li>LeCun et al. — <em>Gradient-Based Learning Applied to Document Recognition</em>, IEEE, 1998.</li>
-              <li>Cortes &amp; Vapnik — <em>Support-Vector Networks</em>, Machine Learning, 1995.</li>
-              <li>Breiman L. — <em>Random Forests</em>, Machine Learning 45(1), 2001.</li>
-              <li>Chollet F. — <em>Deep Learning with Python</em>, Manning, 2021.</li>
-            </ul>
-          </div>
-
-        </div>
-      </div>
-    </section>
-
-  </main>
-
-  <!-- ═══════════════ FOOTER ═══════════════ -->
-  <footer class="footer">
-    <div class="footer-inner">
-      <div class="footer-info"><strong>Dysgraphia Detection System v2.0</strong> · Master 1 STIC</div>
-      <div class="footer-course">APM.02 — Apprentissage par Machine 02 · Dr. NECIBI Khaled · 2025/2026</div>
-      <div class="footer-uni">Département Informatique · Université Constantine 2 — Abdelhamid Mehri</div>
     </div>
-  </footer>
 
-  <script src="/static/script.js"></script>
+    <!-- Carte résultats -->
+    <div class="card result-card" id="resultCard">
+      <div id="resultEmpty" class="result-empty">
+        <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" opacity=".22">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <p>Les résultats apparaîtront ici</p>
+        <small>Uploadez une image et cliquez sur Analyser</small>
+      </div>
+
+      <div id="resultData" class="hidden">
+
+        <!-- Bannière verdict -->
+        <div id="verdictBanner" class="verdict-banner">
+          <div id="verdictIcon" class="verdict-icon"></div>
+          <div class="verdict-text">
+            <div id="verdictLabel"  class="verdict-label"></div>
+            <div id="verdictConf"   class="verdict-conf"></div>
+            <div id="verdictModel"  class="verdict-model-tag"></div>
+          </div>
+        </div>
+
+        <!-- Barres de probabilité -->
+        <div class="prob-block">
+          <div class="prob-row">
+            <span class="prob-name">Écriture Normale</span>
+            <div class="prob-track"><div id="barNormal" class="prob-fill green"></div></div>
+            <span id="valNormal" class="prob-pct">—</span>
+          </div>
+          <div class="prob-row">
+            <span class="prob-name">Dysgraphie</span>
+            <div class="prob-track"><div id="barDys" class="prob-fill red"></div></div>
+            <span id="valDys" class="prob-pct">—</span>
+          </div>
+        </div>
+
+        <!-- Features -->
+        <div class="feat-block">
+          <div class="block-label">Features extraites (12)</div>
+          <div id="featGrid" class="feat-grid"></div>
+        </div>
+
+        <!-- Message clinique -->
+        <div id="clinicMsg" class="clinic-msg"></div>
+
+      </div>
+    </div>
+
+  </div><!-- /two-col -->
+</div>
+</section>
+
+<!-- ═══════════════════════════════ PAGE : DASHBOARD ═══════════════════════════════ -->
+<section id="page-dashboard" class="page hidden">
+<div class="container">
+
+  <div class="page-header">
+    <div>
+      <h2 class="page-title">Dashboard Comparatif</h2>
+      <p class="page-sub">CNN (Deep Learning) vs SVM, Random Forest, KNN (Machine Learning classique) — Workshop 01 + 03 + 04</p>
+    </div>
+    <div class="page-actions">
+      <button class="btn-outline" onclick="reloadDash()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-.08-4.36"/></svg>
+        Actualiser
+      </button>
+      <button class="btn-accent" id="cnnTrainBtn" onclick="trainCNN()">Entraîner CNN</button>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div id="dashLoad" class="loading-box">
+    <div class="loader"></div>
+    <span id="dashLoadMsg">Chargement des métriques…</span>
+  </div>
+
+  <div id="dashMain" class="hidden">
+
+    <!-- KPIs -->
+    <div class="kpi-row" id="kpiRow"></div>
+
+    <!-- Graphiques -->
+    <div class="charts-grid">
+      <div class="card chart-card">
+        <div class="card-head">
+          <h3>Comparaison des Modèles</h3>
+          <p>Accuracy · Précision · Rappel · F1-Score (%)</p>
+        </div>
+        <div class="chart-area"><canvas id="chartBar"></canvas></div>
+      </div>
+      <div class="card chart-card" id="cnnHistCard">
+        <div class="card-head">
+          <h3>Historique CNN</h3>
+          <p>Loss et Accuracy par époque (Workshop 03)</p>
+        </div>
+        <div class="chart-area"><canvas id="chartHist"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Tableau comparatif -->
+    <div class="card" style="margin-bottom:24px">
+      <div class="card-head"><h3>Tableau de Comparaison Complet</h3></div>
+      <div class="table-scroll">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Modèle</th><th>Type</th><th>Accuracy</th>
+              <th>Précision</th><th>Rappel</th><th>F1-Score</th><th>Statut</th>
+            </tr>
+          </thead>
+          <tbody id="dashTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Matrices de confusion -->
+    <div class="section-title">Matrices de Confusion</div>
+    <div class="cm-row" id="dashCmRow"></div>
+
+    <!-- Info dataset -->
+    <div class="card info-bar" id="dashDataInfo"></div>
+
+  </div>
+</div>
+</section>
+
+<!-- ═══════════════════════════════ PAGE : ÉVALUATION ═══════════════════════════════ -->
+<section id="page-evaluate" class="page hidden">
+<div class="container">
+
+  <div class="page-header">
+    <div>
+      <h2 class="page-title">Évaluation des Modèles ML</h2>
+      <p class="page-sub">Métriques détaillées sur le jeu de test (20%) — Workshop 01, Step 04 : Model Evaluation</p>
+    </div>
+    <button class="btn-outline" onclick="reloadEval()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-.08-4.36"/></svg>
+      Actualiser
+    </button>
+  </div>
+
+  <div id="evalLoad" class="loading-box">
+    <div class="loader"></div>
+    <span>Chargement…</span>
+  </div>
+
+  <div id="evalMain" class="hidden">
+
+    <!-- Résumé KPIs -->
+    <div class="kpi-row" id="evalKpiRow"></div>
+
+    <!-- Cartes par modèle -->
+    <div class="models-row" id="modelsRow"></div>
+
+    <!-- Tableau -->
+    <div class="card" style="margin-bottom:28px">
+      <div class="card-head"><h3>Tableau Comparatif — Workshop 01, Step 05</h3></div>
+      <div class="table-scroll">
+        <table class="data-table">
+          <thead>
+            <tr><th>Modèle</th><th>Accuracy</th><th>Précision</th><th>Rappel</th><th>F1-Score</th><th>Statut</th></tr>
+          </thead>
+          <tbody id="evalTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Matrices de confusion -->
+    <div class="section-title">Matrices de Confusion — Workshop 03 : Plot Confusion Matrix</div>
+    <div class="cm-row" id="evalCmRow"></div>
+
+    <!-- Rapport de classification complet -->
+    <div class="section-title">Rapports de Classification Complets</div>
+    <div id="reportsBlock"></div>
+
+    <!-- Infos dataset -->
+    <div class="card info-bar" id="evalDataInfo"></div>
+
+  </div>
+</div>
+</section>
+
+<!-- ═══════════════════════════════ PAGE : À PROPOS ═══════════════════════════════ -->
+<section id="page-about" class="page hidden">
+<div class="container">
+
+  <div class="about-hero">
+    <div class="about-badge">Projet Académique · APM.02 · 2025/2026</div>
+    <h2 class="about-title">Système de Détection de la Dysgraphie</h2>
+    <p class="about-desc">Un projet combinant Machine Learning classique et Deep Learning pour l'analyse automatique de l'écriture manuscrite, réalisé dans le cadre du cours APM.02 sous la direction du Dr. NECIBI Khaled.</p>
+  </div>
+
+  <div class="about-grid">
+
+    <!-- Pipeline -->
+    <div class="card">
+      <div class="card-head"><h3>Pipeline Complet du Projet</h3></div>
+      <div class="card-body">
+        <div class="pipeline">
+          <div class="pipe-step">
+            <div class="pipe-num">1</div>
+            <div class="pipe-info"><strong>Acquisition des données</strong><br/><small>Images manuscrites dans data/normal/ et data/dysgraphia/</small></div>
+          </div>
+          <div class="pipe-step">
+            <div class="pipe-num">2</div>
+            <div class="pipe-info"><strong>Augmentation ×8</strong><br/><small>Rotation ±15°, zoom, décalage, luminosité, bruit, flip</small></div>
+          </div>
+          <div class="pipe-step">
+            <div class="pipe-num">3</div>
+            <div class="pipe-info"><strong>Prétraitement</strong><br/><small>Niveaux de gris, Gaussian blur, seuillage Otsu, normalisation /255</small></div>
+          </div>
+          <div class="pipe-step">
+            <div class="pipe-num">4</div>
+            <div class="pipe-info"><strong>Extraction de Features (ML)</strong><br/><small>12 features structurelles avec OpenCV — train_ml.py</small></div>
+          </div>
+          <div class="pipe-step">
+            <div class="pipe-num">5</div>
+            <div class="pipe-info"><strong>Entraînement ML</strong><br/><small>KNN, SVM, Random Forest — Workshop 01 style</small></div>
+          </div>
+          <div class="pipe-step">
+            <div class="pipe-num">6</div>
+            <div class="pipe-info"><strong>Entraînement CNN</strong><br/><small>3 blocs Conv2D + Dropout + Dense, early stopping — Workshop 03/04</small></div>
+          </div>
+          <div class="pipe-step">
+            <div class="pipe-num">7</div>
+            <div class="pipe-info"><strong>Évaluation</strong><br/><small>Accuracy, Précision, Rappel, F1, Matrice de Confusion</small></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Architecture CNN -->
+    <div class="card">
+      <div class="card-head">
+        <h3>Architecture CNN</h3>
+        <p>Workshop 04 — Convolutional Neural Network (VGG-like)</p>
+      </div>
+      <div class="card-body">
+        <div class="arch-diagram">
+          <div class="arch-node input">Input<br/><small>64×64×1</small></div>
+          <div class="arch-arrow">↓</div>
+          <div class="arch-node conv">Conv2D(32)<br/>ReLU · MaxPool · Dropout(0.25)<br/><small>64→32</small></div>
+          <div class="arch-arrow">↓</div>
+          <div class="arch-node conv">Conv2D(64)<br/>ReLU · MaxPool · Dropout(0.25)<br/><small>32→16</small></div>
+          <div class="arch-arrow">↓</div>
+          <div class="arch-node conv">Conv2D(128)<br/>ReLU · MaxPool · Dropout(0.25)<br/><small>16→8</small></div>
+          <div class="arch-arrow">↓</div>
+          <div class="arch-node dense">Flatten → Dense(256, ReLU)<br/>Dropout(0.5)</div>
+          <div class="arch-arrow">↓</div>
+          <div class="arch-node output">Dense(1, Sigmoid)<br/><small>0 = Normal · 1 = Dysgraphie</small></div>
+        </div>
+        <div class="arch-info">
+          <div class="arch-info-row"><span>Optimiseur</span><strong>Adam</strong></div>
+          <div class="arch-info-row"><span>Perte</span><strong>Binary Crossentropy</strong></div>
+          <div class="arch-info-row"><span>Early Stopping</span><strong>patience = 8</strong></div>
+          <div class="arch-info-row"><span>Max Époques</span><strong>50</strong></div>
+          <div class="arch-info-row"><span>Batch Size</span><strong>32</strong></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Features -->
+    <div class="card">
+      <div class="card-head"><h3>Features Extraites (12) — train_ml.py</h3></div>
+      <div class="card-body">
+        <div class="feat-tags">
+          <span class="feat-tag">Intensité Moyenne</span>
+          <span class="feat-tag">Écart-Type</span>
+          <span class="feat-tag">Ratio Pixels Sombres</span>
+          <span class="feat-tag">Densité des Bords (Canny)</span>
+          <span class="feat-tag">Nombre de Contours</span>
+          <span class="feat-tag">Aire Moyenne Contours</span>
+          <span class="feat-tag">Périmètre Moyen</span>
+          <span class="feat-tag">Variance Horizontale</span>
+          <span class="feat-tag">Variance Verticale</span>
+          <span class="feat-tag">Variance Laplacien</span>
+          <span class="feat-tag">Asymétrie Pixels</span>
+          <span class="feat-tag">Irrégularité Encre</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stack -->
+    <div class="card">
+      <div class="card-head"><h3>Stack Technologique</h3></div>
+      <div class="card-body">
+        <div class="tech-list">
+          <div class="tech-item"><span class="tech-emoji">🧠</span><div><strong>TensorFlow / Keras</strong><small>CNN — Workshop 04</small></div></div>
+          <div class="tech-item"><span class="tech-emoji">🤖</span><div><strong>scikit-learn</strong><small>KNN, SVM, RF — Workshop 01</small></div></div>
+          <div class="tech-item"><span class="tech-emoji">👁</span><div><strong>OpenCV</strong><small>Extraction de features</small></div></div>
+          <div class="tech-item"><span class="tech-emoji">🌐</span><div><strong>Flask 3</strong><small>Application web</small></div></div>
+          <div class="tech-item"><span class="tech-emoji">📊</span><div><strong>Chart.js 4</strong><small>Graphiques dashboard</small></div></div>
+          <div class="tech-item"><span class="tech-emoji">🐍</span><div><strong>Python 3.11</strong><small>Langage principal</small></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Références -->
+    <div class="card">
+      <div class="card-head"><h3>Références</h3></div>
+      <div class="card-body">
+        <ul class="ref-list">
+          <li><strong>Dr. NECIBI Khaled</strong> — Workshops 01–04 APM.02, Université Constantine 2, 2025/2026</li>
+          <li><strong>LeCun et al.</strong> — Gradient-Based Learning Applied to Document Recognition, IEEE 1998</li>
+          <li><strong>Cortes & Vapnik</strong> — Support-Vector Networks, Machine Learning, 1995</li>
+          <li><strong>Breiman L.</strong> — Random Forests, Machine Learning 45(1), 2001</li>
+          <li><strong>Chollet F.</strong> — Deep Learning with Python, Manning, 2021</li>
+        </ul>
+      </div>
+    </div>
+
+  </div><!-- /about-grid -->
+</div>
+</section>
+
+</main>
+
+<!-- ═══════════════════════════════════ FOOTER ═══════════════════════════════════ -->
+<footer class="footer">
+  <div class="footer-inner">
+    <div class="footer-brand">DysDetect v2.0</div>
+    <div class="footer-line">APM.02 — Apprentissage par Machine 02 · Dr. NECIBI Khaled · 2025/2026</div>
+    <div class="footer-line">Master 1 STIC · Département IFA · Université Constantine 2 — Abdelhamid Mehri</div>
+  </div>
+</footer>
+
+<script src="/static/script.js"></script>
 </body>
 </html>
