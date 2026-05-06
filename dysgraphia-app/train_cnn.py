@@ -65,6 +65,12 @@ from sklearn.metrics import (
     classification_report
 )
 
+# matplotlib : visualisations (courbes + matrice de confusion)
+import matplotlib
+import matplotlib.pyplot as plt
+import matplotlib.ticker
+from matplotlib.patches import Patch
+
 # ============================================================
 # Configuration
 # ============================================================
@@ -357,6 +363,243 @@ def print_training_history(history):
 
 
 # ============================================================
+# VISUALISATION — Courbes d'entraînement CNN
+# (Workshop 03 — "Plot the loss function over Epochs")
+#
+# Figure avec 2 sous-graphes :
+#   1. Accuracy vs Epoch  (train + validation)
+#   2. Loss    vs Epoch   (train + validation)
+#
+# plt.show() — aucune sauvegarde
+# ============================================================
+
+def plot_training_curves(history):
+    """
+    Affiche les courbes d'entraînement CNN.
+
+    (Workshop 03 — "Plot the loss function over Epochs")
+
+    Graphique 1 : Accuracy vs Epoch
+    Graphique 2 : Loss    vs Epoch
+
+    Paramètres :
+        history : objet retourné par model.fit()
+    """
+    acc      = history.history["accuracy"]
+    val_acc  = history.history["val_accuracy"]
+    loss     = history.history["loss"]
+    val_loss = history.history["val_loss"]
+    epochs   = range(1, len(acc) + 1)
+
+    # ── Figure avec 2 sous-graphes
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(13, 5))
+    fig.patch.set_facecolor("#0e1118")
+
+    # ── Couleurs
+    TRAIN_COLOR = "#6366f1"
+    VAL_COLOR   = "#22c55e"
+    LOSS_TRAIN  = "#ef4444"
+    LOSS_VAL    = "#f59e0b"
+    BG          = "#131720"
+    GRID_COLOR  = "#1e2640"
+    TEXT_COLOR  = "#8891a8"
+
+    # ──────────────────────────────────────────
+    # Sous-graphe 1 : Accuracy vs Epoch
+    # ──────────────────────────────────────────
+    ax1.set_facecolor(BG)
+    ax1.plot(epochs, [v * 100 for v in acc],
+             color=TRAIN_COLOR, linewidth=2.2, marker="o", markersize=3.5,
+             label="Train Accuracy")
+    ax1.plot(epochs, [v * 100 for v in val_acc],
+             color=VAL_COLOR, linewidth=2.2, marker="s", markersize=3.5,
+             linestyle="--", label="Validation Accuracy")
+
+    ax1.set_title("Accuracy vs Epoch", fontsize=12, fontweight="bold",
+                  color="white", pad=10)
+    ax1.set_xlabel("Epoch", fontsize=10, color=TEXT_COLOR, labelpad=6)
+    ax1.set_ylabel("Accuracy (%)", fontsize=10, color=TEXT_COLOR, labelpad=6)
+    ax1.set_ylim(0, 105)
+    ax1.yaxis.set_major_formatter(matplotlib.ticker.FormatStrFormatter("%.0f%%"))
+    ax1.yaxis.grid(True, color=GRID_COLOR, linewidth=0.8, linestyle="--", alpha=0.7)
+    ax1.set_axisbelow(True)
+    ax1.tick_params(colors=TEXT_COLOR, length=0)
+    ax1.spines[["top", "right", "left", "bottom"]].set_visible(False)
+    ax1.legend(fontsize=9, framealpha=0.15, edgecolor="#252e48", labelcolor="white")
+
+    # Annoter le max de val_accuracy
+    best_val_epoch = int(np.argmax(val_acc)) + 1
+    best_val       = max(val_acc) * 100
+    ax1.annotate(
+        f"Max Val: {best_val:.1f}%\n(Epoch {best_val_epoch})",
+        xy=(best_val_epoch, best_val),
+        xytext=(best_val_epoch + max(1, len(epochs) * 0.06), best_val - 8),
+        fontsize=8, color=VAL_COLOR,
+        arrowprops=dict(arrowstyle="->", color=VAL_COLOR, lw=1.2)
+    )
+
+    # ──────────────────────────────────────────
+    # Sous-graphe 2 : Loss vs Epoch
+    # ──────────────────────────────────────────
+    ax2.set_facecolor(BG)
+    ax2.plot(epochs, loss,
+             color=LOSS_TRAIN, linewidth=2.2, marker="o", markersize=3.5,
+             label="Train Loss")
+    ax2.plot(epochs, val_loss,
+             color=LOSS_VAL, linewidth=2.2, marker="s", markersize=3.5,
+             linestyle="--", label="Validation Loss")
+
+    ax2.set_title("Loss vs Epoch", fontsize=12, fontweight="bold",
+                  color="white", pad=10)
+    ax2.set_xlabel("Epoch", fontsize=10, color=TEXT_COLOR, labelpad=6)
+    ax2.set_ylabel("Loss (Binary Crossentropy)", fontsize=10, color=TEXT_COLOR, labelpad=6)
+    ax2.yaxis.grid(True, color=GRID_COLOR, linewidth=0.8, linestyle="--", alpha=0.7)
+    ax2.set_axisbelow(True)
+    ax2.tick_params(colors=TEXT_COLOR, length=0)
+    ax2.spines[["top", "right", "left", "bottom"]].set_visible(False)
+    ax2.legend(fontsize=9, framealpha=0.15, edgecolor="#252e48", labelcolor="white")
+
+    # Annoter le min de val_loss
+    best_loss_epoch = int(np.argmin(val_loss)) + 1
+    best_loss_val   = min(val_loss)
+    ax2.annotate(
+        f"Min Val Loss: {best_loss_val:.4f}\n(Epoch {best_loss_epoch})",
+        xy=(best_loss_epoch, best_loss_val),
+        xytext=(best_loss_epoch + max(1, len(epochs) * 0.06), best_loss_val + 0.05),
+        fontsize=8, color=LOSS_VAL,
+        arrowprops=dict(arrowstyle="->", color=LOSS_VAL, lw=1.2)
+    )
+
+    fig.suptitle(
+        "Courbes d'Entraînement CNN — Dysgraphia Detection\n"
+        "APM.02 · Workshop 03 · Dr. NECIBI Khaled · Université Constantine 2",
+        fontsize=12, fontweight="bold", color="white", y=1.02
+    )
+    plt.tight_layout()
+    plt.show()
+
+
+# ============================================================
+# VISUALISATION — Matrice de Confusion (CNN)
+# (Workshop 03 — "Plot Confusion Matrix")
+#
+# matplotlib uniquement (pas seaborn)
+# Nombres dans chaque cellule
+# X-axis : Predicted | Y-axis : True
+# Classes : ["Typical", "Dysgraphia"]
+# plt.show() — aucune sauvegarde
+# ============================================================
+
+def plot_confusion_matrix_cnn(y_true, y_pred):
+    """
+    Affiche la matrice de confusion du CNN.
+
+    (Workshop 03 — "Plot Confusion Matrix")
+    matplotlib uniquement — pas seaborn, pas de sauvegarde
+
+    Structure :
+      Lignes   = True labels  (Y-axis)
+      Colonnes = Predicted    (X-axis)
+      Classes  : ["Typical", "Dysgraphia"]
+
+    Cellules :
+      [0,0] TN vert  — Typical    prédit Typical
+      [0,1] FP rouge — Typical    prédit Dysgraphia
+      [1,0] FN rouge — Dysgraphia prédit Typical
+      [1,1] TP vert  — Dysgraphia prédit Dysgraphia
+
+    Paramètres :
+        y_true : array de vraies étiquettes (0 ou 1)
+        y_pred : array de prédictions       (0 ou 1)
+    """
+    from sklearn.metrics import confusion_matrix as sk_cm
+    cm      = sk_cm(y_true, y_pred)
+    classes = ["Typical", "Dysgraphia"]
+
+    fig, ax = plt.subplots(figsize=(7, 6))
+    fig.patch.set_facecolor("#0e1118")
+    ax.set_facecolor("#131720")
+
+    # ── Couleurs des cellules
+    #    vert  = bonne prédiction (TN, TP)
+    #    rouge = mauvaise prédiction (FP, FN)
+    cell_colors = [
+        ["#166534", "#7f1d1d"],   # ligne 0 : TN, FP
+        ["#7f1d1d", "#166534"],   # ligne 1 : FN, TP
+    ]
+    cell_labels = [
+        ["TN", "FP"],
+        ["FN", "TP"],
+    ]
+
+    n = len(classes)
+    for i in range(n):
+        for j in range(n):
+            # Rectangle coloré
+            rect = plt.Rectangle(
+                [j, n - 1 - i], 1, 1,
+                color=cell_colors[i][j],
+                ec="#0e1118", lw=2
+            )
+            ax.add_patch(rect)
+
+            # Nombre (grand, centré)
+            ax.text(
+                j + 0.5, n - 0.5 - i, str(cm[i][j]),
+                ha="center", va="center",
+                fontsize=32, fontweight="bold", color="white"
+            )
+
+            # Étiquette TP / TN / FP / FN (petit, en dessous du nombre)
+            ax.text(
+                j + 0.5, n - 0.72 - i, cell_labels[i][j],
+                ha="center", va="center",
+                fontsize=11, color="white", alpha=0.65
+            )
+
+    # ── Axes
+    ax.set_xlim(0, n)
+    ax.set_ylim(0, n)
+
+    # X : Predicted (en bas)
+    ax.set_xticks([i + 0.5 for i in range(n)])
+    ax.set_xticklabels(classes, fontsize=12, color="white", fontweight="bold")
+    ax.set_xlabel("Predicted", fontsize=12, color="#8891a8", labelpad=10)
+
+    # Y : True (à gauche)
+    ax.set_yticks([i + 0.5 for i in range(n)])
+    ax.set_yticklabels(classes[::-1], fontsize=12, color="white", fontweight="bold")
+    ax.set_ylabel("True", fontsize=12, color="#8891a8", labelpad=10)
+
+    ax.tick_params(length=0)
+    for spine in ax.spines.values():
+        spine.set_visible(False)
+
+    # ── Titre
+    ax.set_title(
+        "Confusion Matrix — CNN (Dysgraphia)\n"
+        "APM.02 · Workshop 03 · Dr. NECIBI Khaled · Université Constantine 2",
+        fontsize=12, fontweight="bold", color="white", pad=16
+    )
+
+    # ── Légende TP/TN/FP/FN
+    from matplotlib.patches import Patch
+    legend_items = [
+        Patch(facecolor="#166534", label="TP / TN — Bonne prédiction"),
+        Patch(facecolor="#7f1d1d", label="FP / FN — Mauvaise prédiction"),
+    ]
+    ax.legend(
+        handles=legend_items, loc="upper right",
+        bbox_to_anchor=(1.0, -0.08), ncol=2,
+        fontsize=9, framealpha=0.1, edgecolor="#252e48",
+        labelcolor="white"
+    )
+
+    plt.tight_layout()
+    plt.show()
+
+
+# ============================================================
 # Step 6 : Évaluation du modèle
 # (Workshop 03 — "Model Evaluation and Prediction")
 # (Workshop 01 — mêmes métriques : accuracy, precision, recall, F1)
@@ -471,6 +714,16 @@ def train():
     # STEP 6 : Évaluation (Workshop 03 — "Model Evaluation and Prediction")
     print("\n[Step 6] Évaluation du modèle CNN...")
     metrics = evaluate_cnn(model, X_test, y_test)
+
+    # ── VISUALISATION 1 : Courbes d'entraînement (Accuracy + Loss vs Epoch)
+    print("\n  Affichage des courbes d'entraînement...")
+    plot_training_curves(history)
+
+    # ── VISUALISATION 2 : Matrice de confusion CNN
+    print("  Affichage de la matrice de confusion CNN...")
+    y_pred_prob = model.predict(X_test, verbose=0).flatten()
+    y_pred_vis  = (y_pred_prob > 0.5).astype(int)
+    plot_confusion_matrix_cnn(y_test, y_pred_vis)
 
     # STEP 7 : Sauvegarder l'historique + métriques en JSON
     print("\n[Step 7] Sauvegarde du modèle et des métriques...")

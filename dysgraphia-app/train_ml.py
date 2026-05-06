@@ -49,6 +49,12 @@ from sklearn.metrics import (
     classification_report
 )
 
+# matplotlib : visualisations (barres comparatives + matrices de confusion)
+import matplotlib
+import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
+import matplotlib.ticker
+
 # ============================================================
 # Configuration générale
 # ============================================================
@@ -496,6 +502,194 @@ def print_summary(results):
 
 
 # ============================================================
+# VISUALISATION — Machine Learning Comparison
+# (Workshop 01, Step 05 — Performance Interpretation)
+#
+# Graphique en barres groupées comparant :
+#   - Accuracy · Precision · Recall · F1-Score
+# pour chaque modèle ML (KNN, SVM, Random Forest)
+#
+# Affiché avec plt.show() — aucune sauvegarde
+# ============================================================
+
+def plot_ml_comparison(results):
+    """
+    Affiche un graphique en barres comparant les 3 modèles ML.
+
+    Métriques affichées (Workshop 01, Step 04) :
+      - Accuracy
+      - Precision
+      - Recall
+      - F1-Score
+
+    Paramètres :
+        results : liste de dicts retournés par evaluate_model()
+    """
+    # ── Données
+    model_names = [r["name"] for r in results]
+    metrics     = ["accuracy", "precision", "recall", "f1_score"]
+    labels      = ["Accuracy", "Precision", "Recall", "F1-Score"]
+    colors      = ["#6366f1", "#a855f7", "#06b6d4", "#22c55e"]
+
+    n_models  = len(model_names)
+    n_metrics = len(metrics)
+    x         = np.arange(n_models)        # positions des groupes
+    width     = 0.18                        # largeur de chaque barre
+
+    # ── Figure
+    fig, ax = plt.subplots(figsize=(11, 6))
+    fig.patch.set_facecolor("#0e1118")
+    ax.set_facecolor("#131720")
+
+    # ── Tracé des barres groupées
+    for i, (metric, label, color) in enumerate(zip(metrics, labels, colors)):
+        values = [r[metric] * 100 for r in results]   # en %
+        offset = (i - n_metrics / 2 + 0.5) * width
+        bars = ax.bar(
+            x + offset, values,
+            width,
+            label=label,
+            color=color,
+            alpha=0.88,
+            edgecolor="#1d2333",
+            linewidth=0.6
+        )
+        # Valeur au-dessus de chaque barre
+        for bar, val in zip(bars, values):
+            ax.text(
+                bar.get_x() + bar.get_width() / 2,
+                bar.get_height() + 0.5,
+                f"{val:.1f}%",
+                ha="center", va="bottom",
+                fontsize=7.5, fontweight="bold",
+                color="white"
+            )
+
+    # ── Axes et titres
+    ax.set_title(
+        "Machine Learning — Comparaison des Modèles (Dysgraphia Detection)\n"
+        "APM.02 · Workshop 01 · Dr. NECIBI Khaled · Université Constantine 2",
+        fontsize=12, fontweight="bold", color="white", pad=16
+    )
+    ax.set_xlabel("Modèles", fontsize=10, color="#8891a8", labelpad=8)
+    ax.set_ylabel("Score (%)", fontsize=10, color="#8891a8", labelpad=8)
+    ax.set_xticks(x)
+    ax.set_xticklabels(model_names, fontsize=11, color="white", fontweight="bold")
+    ax.set_ylim(0, 108)
+    ax.set_yticks(range(0, 101, 10))
+    ax.yaxis.set_major_formatter(matplotlib.ticker.FormatStrFormatter("%.0f%%"))
+
+    # ── Grille
+    ax.yaxis.grid(True, color="#1e2640", linewidth=0.8, linestyle="--", alpha=0.7)
+    ax.set_axisbelow(True)
+    ax.spines[["top", "right", "left", "bottom"]].set_visible(False)
+    ax.tick_params(colors="#8891a8", length=0)
+
+    # ── Légende
+    legend = ax.legend(
+        loc="upper right", fontsize=9,
+        framealpha=0.15, edgecolor="#252e48",
+        labelcolor="white"
+    )
+
+    plt.tight_layout()
+    plt.show()
+
+
+# ============================================================
+# VISUALISATION — Matrices de Confusion (ML)
+# (Workshop 01, Step 04 — Plot Confusion Matrix)
+#
+# Affiche une figure avec les matrices de confusion
+# de chaque modèle ML côte à côte
+# Nombres dans chaque cellule + labels TP/TN/FP/FN
+# ============================================================
+
+def plot_ml_confusion_matrices(results):
+    """
+    Affiche les matrices de confusion de tous les modèles ML.
+
+    Même logique que Workshop 03 — "Plot Confusion Matrix"
+    Utilise matplotlib uniquement (pas seaborn)
+
+    Cellules :
+      TN (haut-gauche)  = vert  → Normal prédit Normal
+      FP (haut-droite)  = rouge → Normal prédit Dysgraphie
+      FN (bas-gauche)   = rouge → Dysgraphie prédit Normal
+      TP (bas-droite)   = vert  → Dysgraphie prédit Dysgraphie
+    """
+    classes   = ["Typical", "Dysgraphia"]
+    n_models  = len(results)
+    fig, axes = plt.subplots(1, n_models, figsize=(5 * n_models, 5))
+    fig.patch.set_facecolor("#0e1118")
+
+    if n_models == 1:
+        axes = [axes]
+
+    for ax, r in zip(axes, results):
+        cm = np.array(r["confusion_matrix"])
+
+        # Couleurs : vert pour TN/TP, rouge pour FP/FN
+        cell_colors = np.array([
+            ["#166534", "#7f1d1d"],
+            ["#7f1d1d", "#166534"]
+        ])
+
+        ax.set_facecolor("#131720")
+        ax.set_title(r["name"], fontsize=13, fontweight="bold", color="white", pad=12)
+
+        # Cellules colorées + nombres
+        for i in range(2):
+            for j in range(2):
+                rect = plt.Rectangle(
+                    [j, 1 - i], 1, 1,
+                    color=cell_colors[i][j], ec="#1d2333", lw=1.5
+                )
+                ax.add_patch(rect)
+                # Nombre principal
+                ax.text(
+                    j + 0.5, 1.5 - i, str(cm[i][j]),
+                    ha="center", va="center",
+                    fontsize=26, fontweight="bold", color="white"
+                )
+                # Étiquette TP / TN / FP / FN
+                cell_label = [["TN", "FP"], ["FN", "TP"]][i][j]
+                ax.text(
+                    j + 0.5, 1.5 - i - 0.28, cell_label,
+                    ha="center", va="center",
+                    fontsize=10, color="rgba(255,255,255,0.55)" if False else "#ffffff99"
+                )
+
+        # Axes
+        ax.set_xlim(0, 2)
+        ax.set_ylim(0, 2)
+        ax.set_xticks([0.5, 1.5])
+        ax.set_xticklabels(classes, fontsize=10, color="white")
+        ax.set_yticks([0.5, 1.5])
+        ax.set_yticklabels(classes[::-1], fontsize=10, color="white")
+        ax.set_xlabel("Predicted", fontsize=10, color="#8891a8", labelpad=8)
+        ax.set_ylabel("True", fontsize=10, color="#8891a8", labelpad=8)
+        ax.tick_params(length=0, colors="white")
+        for spine in ax.spines.values():
+            spine.set_visible(False)
+
+        # Accuracy en bas
+        ax.text(
+            1, -0.22, f"Accuracy : {r['accuracy']*100:.2f}%",
+            ha="center", fontsize=9, color="#8891a8",
+            transform=ax.transData
+        )
+
+    fig.suptitle(
+        "Matrices de Confusion — Modèles ML (Dysgraphia Detection)\n"
+        "APM.02 · Workshop 01 · Dr. NECIBI Khaled",
+        fontsize=12, fontweight="bold", color="white", y=1.02
+    )
+    plt.tight_layout()
+    plt.show()
+
+
+# ============================================================
 # MAIN — Pipeline complet (comme dans les Workshops)
 # ============================================================
 
@@ -556,6 +750,14 @@ def train():
 
     # STEP 7 : Afficher le résumé (Workshop 01, Step 05)
     print_summary(results)
+
+    # ── VISUALISATION 1 : Barres comparatives (Accuracy, Precision, Recall, F1)
+    print("\n  Affichage du graphique comparatif ML...")
+    plot_ml_comparison(results)
+
+    # ── VISUALISATION 2 : Matrices de confusion (TN / FP / FN / TP)
+    print("  Affichage des matrices de confusion ML...")
+    plot_ml_confusion_matrices(results)
 
     # STEP 8 : Sauvegarder les métriques en JSON
     metrics_data = {
